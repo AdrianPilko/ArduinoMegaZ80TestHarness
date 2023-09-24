@@ -53,17 +53,22 @@ WR RD Address bus = 11111101101010 Data bus = 11111111
 
 int addressPins[NUMBER_OF_ADDRESS_PINS] = {22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52};
 int dataPins[NUMBER_OF_DATA_PINS] = {14,15,16,17,18,19,20,21};
-int resetPin = 0; // active low 
-int clockPin = 1; 
+int RESET = 0; // active low 
+int CLK = 1; 
+int IORQ = 2;
+int MREQ = 3;
+int HALT = 4;
+
 int readEnable = 53; // active low 
 int writeEnable = 51; // active low 
 
 void toggleClock()
 {
-  // clock
-  digitalWrite(clockPin, HIGH);
-  delay(100);
-  digitalWrite(clockPin, LOW);  
+  // clock  
+  digitalWrite(CLK, HIGH);
+  delay(500);
+  digitalWrite(CLK, LOW);    
+  delay(500);
 }
 
 
@@ -99,21 +104,25 @@ void setup() {
   setAddressPinsToInput();
   setDataToOutput();
 
-  pinMode(clockPin, OUTPUT);   // remember that the INPUT / OUTPUT is from the point of view of the Arduino
-  pinMode(resetPin, OUTPUT);
+  pinMode(RESET, OUTPUT);   // remember that the INPUT / OUTPUT is from the point of view of the Arduino
+  pinMode(CLK, OUTPUT);
+  pinMode(IORQ, INPUT);
+  pinMode(MREQ, INPUT);
+  pinMode(HALT, INPUT);
+  
   pinMode(readEnable, INPUT);   
   pinMode(writeEnable, INPUT);
 
   // to reset z80 the reset must be held active (low) for a minimum of 3 clock cycles
   // then set to high after
-  digitalWrite(resetPin, LOW);    
-  Serial.println("holding reset low to 10 clock cycles");
-  for (int i = 0; i < 10; i++)
+  digitalWrite(RESET, LOW);    
+  Serial.println("holding reset low ");
+  for (int i = 0; i < 4; i++)
   {
     toggleClock();    
   }
   Serial.println("holding reset high");
-  digitalWrite(resetPin, HIGH); 
+  digitalWrite(RESET, HIGH); 
 }
 
 void outputToDataPins(uint8_t val)
@@ -137,12 +146,24 @@ uint8_t readFromDataPins()
 }
 
 void readDataAndAddress()
-{
+{  
   uint16_t addressBus = 0;
   uint8_t dataBus = 0;
   bool writeEn = !digitalRead(writeEnable);    /// active low so not added before
   bool readEn = !digitalRead(readEnable);  /// active low so not added before
-
+  bool ioRequest = !digitalRead(IORQ);
+  bool memRequest = !digitalRead(MREQ);
+  bool haltSet = !digitalRead(HALT);
+  
+  if (ioRequest || memRequest || haltSet)
+  { 
+    Serial.print("status control=");
+    if (ioRequest) Serial.print("IOREQ");
+    if (memRequest) Serial.print("MREQ");
+    if (haltSet) Serial.print("HALT");
+    Serial.println();
+  }
+  toggleClock();  
   if (readEn)
   { 
     Serial.print("RD ");
@@ -151,29 +172,29 @@ void readDataAndAddress()
     {
         addressBus |= digitalRead(addressPins[i+22]) << i;       
     }
-    // set the Data pins to OUTPUT and send 0xff
     dataBus = 0x0; // 0x00 is nop instruction
-    outputToDataPins(dataBus);
+    outputToDataPins(dataBus);    
+    
+    Serial.print("Address bus = ");
+    Serial.print(addressBus,BIN);
+    Serial.print("\t\t Writing value to data = ");
+    Serial.print(dataBus,BIN);    
+    Serial.println();
   }
   
   if (writeEn)  
-  {  // this means Z80 trying to send some data, so get arduino to read it
-    Serial.print("WR ");
-    outputToDataPins(0xff);
-    for (int i = 0; i < NUMBER_OF_DATA_PINS; i++)
+  {  // this means Z80 trying to send some data to data pins, so get arduino to read it
+    Serial.print("WRite to address ");
+    for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
     {
-        dataBus |= (digitalRead(dataPins[i+14]) << i);       
-    }   
-  }  
-  Serial.print("Address bus = ");
-  Serial.print(addressBus,BIN);
-  Serial.print("\t\tData bus = ");
-  Serial.print(dataBus,BIN);
-  Serial.println();
+        addressBus |= digitalRead(addressPins[i+22]) << i;       
+    }    
+    Serial.print(addressBus,BIN);        
+    dataBus = readFromDataPins();
+    Serial.println(dataBus, BIN);    
+  }    
 }
 
 void loop() {
-  toggleClock();
   readDataAndAddress();
-  toggleClock();  
 }
