@@ -345,9 +345,6 @@ void loop()
 {    
   
   //runCPUCycle();    
-
-  // just run one  instruction fetch cycle and exit
-  
   setClock(HIGH);
   clockHighCount++;
   delay(250);
