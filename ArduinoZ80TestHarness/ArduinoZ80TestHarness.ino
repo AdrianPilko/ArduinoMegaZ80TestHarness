@@ -26,40 +26,46 @@ The address buss should be set to zero after the reset, but it's not!
 
 holding reset low 
 holding reset high
-High=3 Low=2...Status=M1 
+T_cycle = 2 M_cycle = 1
+T_cycle = 3 M_cycle = 1
 High=3 Low=3...Status=RD MREQ M1 
-High=4 Low=3...Status=RD MREQ M1 
+T_cycle = 1 M_cycle = 1
+Address set to=1100001000011000
+Setting data bus to 1110110
 High=4 Low=4...Status=RD MREQ M1 
-High=5 Low=4...Status=REFRESH 
+T_cycle = 1 M_cycle = 1
+Address set to=1100001000011000
+Setting data bus to 1110110
 High=5 Low=5...Status=MREQ REFRESH 
-High=6 Low=5...Status=MREQ REFRESH 
+T_cycle = 2 M_cycle = 1
 High=6 Low=6...Status=REFRESH 
-High=9 Low=8...Status=M1 
-High=9 Low=9...Status=RD MREQ M1 
-High=10 Low=9...Status=RD MREQ M1 
-High=10 Low=10...Status=RD MREQ M1 
-High=11 Low=10...Status=REFRESH 
-High=11 Low=11...Status=MREQ REFRESH 
-High=12 Low=11...Status=MREQ REFRESH 
-High=12 Low=12...Status=REFRESH 
-High=15 Low=14...Status=M1 
-High=15 Low=15...Status=RD MREQ M1 
-High=16 Low=15...Status=RD MREQ M1 
-High=16 Low=16...Status=RD MREQ M1 
-High=17 Low=16...Status=REFRESH 
-High=17 Low=17...Status=MREQ REFRESH 
-High=18 Low=17...Status=MREQ REFRESH 
-High=18 Low=18...Status=REFRESH 
-High=21 Low=20...Status=M1 
-High=21 Low=21...Status=RD MREQ M1 
-High=22 Low=21...Status=RD MREQ M1 
-High=22 Low=22...Status=RD MREQ M1 
-High=23 Low=22...Status=REFRESH 
-High=23 Low=23...Status=MREQ REFRESH 
-High=24 Low=23...Status=MREQ REFRESH 
-High=24 Low=24...Status=REFRESH 
-High=27 Low=26...Status=M1 
-High=27 Low=27...Status=RD MREQ M1 
+T_cycle = 3 M_cycle = 1
+T_cycle = 4 M_cycle = 2
+T_cycle = 5 M_cycle = 3
+High=9 Low=9...Status=BUSAK 
+T_cycle = 6 M_cycle = 4
+High=10 Low=10...Status=BUSAK 
+T_cycle = 7 M_cycle = 5
+High=11 Low=11...Status=RD WR BUSAK 
+T_cycle = 8 M_cycle = 6
+High=12 Low=12...Status=WR BUSAK 
+T_cycle = 9 M_cycle = 7
+High=13 Low=13...Status=RD WR IOREQ MREQ BUSAK 
+T_cycle = 10 M_cycle = 8
+High=14 Low=14...Status=RD WR IOREQ MREQ BUSAK 
+T_cycle = 11 M_cycle = 9
+High=15 Low=15...Status=RD WR IOREQ MREQ BUSAK 
+T_cycle = 12 M_cycle = 10
+High=16 Low=16...Status=RD WR IOREQ MREQ BUSAK 
+T_cycle = 13 M_cycle = 11
+High=17 Low=17...Status=RD WR IOREQ MREQ BUSAK 
+T_cycle = 14 M_cycle = 12
+High=18 Low=18...Status=RD WR IOREQ MREQ BUSAK 
+T_cycle = 15 M_cycle = 13
+High=19 Low=19...Status=RD WR IOREQ MREQ BUSAK 
+T_cycle = 16 M_cycle = 14
+High=20 Low=20...Status=RD WR IOREQ MREQ BUSAK 
+T_cycle = 17 M_cycle = 15
 
 
 */
@@ -94,7 +100,7 @@ bool readEn = false;
 bool ioRequest = false;
 bool memRequest =false;
 bool haltSet = false;
-bool MemOne = false;
+bool MachineOne = false;
 bool refreshSet = false;
 bool busAckSet = false;
 
@@ -226,11 +232,18 @@ void setup() {
 }
 
 void outputToDataPins(uint8_t val)
-{
+{       
     setDataToOutput();
-    for (int i = 0; i < NUMBER_OF_DATA_PINS; i++)
+    Serial.print("Setting data bus to ");
+    Serial.println(val,BIN);    
+    
+    for (int i = NUMBER_OF_DATA_PINS; i >= 0; i--)
     {
-        digitalWrite(dataPins[i+dataPins[0]], val << i);       
+      uint8_t thebit = val & 0x01;
+      
+      digitalWrite(dataPins[i+dataPins[0]], thebit);       
+
+      val >>= 1;
     }   
 }
 
@@ -252,11 +265,11 @@ void readStatus()
   ioRequest = !digitalRead(IORQ);
   memRequest = !digitalRead(MREQ);
   haltSet = !digitalRead(HALT);
-  MemOne = !digitalRead(M1);
+  MachineOne = !digitalRead(M1);
   refreshSet = !digitalRead(REFRESH);
   busAckSet = !digitalRead(BUSAK);
 
-  if (ioRequest || memRequest || haltSet || MemOne || refreshSet || busAckSet)
+  if (ioRequest || memRequest || haltSet || MachineOne || refreshSet || busAckSet)
   { 
     Serial.print("High=");
     Serial.print(clockHighCount);
@@ -269,7 +282,7 @@ void readStatus()
     if (ioRequest == true) Serial.print("IOREQ ");
     if (memRequest== true) Serial.print("MREQ ");
     if (haltSet== true) Serial.print("HALT ");
-    if (MemOne== true) Serial.print("M1 ");
+    if (MachineOne== true) Serial.print("M1 ");
     if (refreshSet== true) Serial.print("REFRESH ");
     if (busAckSet== true) Serial.print("BUSAK ");
     Serial.println();
@@ -316,25 +329,53 @@ void printCurrentAddressBus()
     uint16_t addressBus = 0;
     for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
     {
-        addressBus |= digitalRead(addressPins[i+addressPins[0]]) << i;       
+        addressBus <<= 1;
+        addressBus |= digitalRead(addressPins[i+addressPins[0]]);       
     }
     Serial.print("Address set to=");
     Serial.print(addressBus,BIN); 
     Serial.println();
 }
 
+// we need to keep track of Timing cycle and Machine cycle 
+int T_cycle = 1; // cycles from 1 to 4 on an instruction fetch, other cycles may be longer
+int M_cycle = 1; // M state cycles through (as far as I can tell M1 opcode fetch, M2 - memory read,  M3 - memory write
+
 void loop() 
 {    
+  
   //runCPUCycle();    
+
+  // just run one  instruction fetch cycle and exit
+  
   setClock(HIGH);
   clockHighCount++;
-  readStatus();
-  if (MemOne == true)
-  {
-      printCurrentAddressBus();
-  }    
+  delay(250);
   setClock(LOW);
   clockLowCount++;
   readStatus();
-  delay(1000);
+  if (MachineOne == true) 
+  {
+    M_cycle = 1;
+    T_cycle = 1;
+  }
+  else
+  {
+    T_cycle++;
+    if (T_cycle >= 4) M_cycle++;
+  }
+  Serial.print("T_cycle = ");
+  Serial.print(T_cycle);
+  Serial.print(" M_cycle = ");
+  Serial.println(M_cycle);  
+  
+  if (memRequest && MachineOne && readEn) 
+  {
+      printCurrentAddressBus();
+      
+      uint8_t dataBus = 0x76; // 0x00 is nop instruction
+      //dataBus = 0x76; // 0x76 is halt
+      outputToDataPins(dataBus);    
+  }   
+  if (clockLowCount > 20) exit(0);
 }
