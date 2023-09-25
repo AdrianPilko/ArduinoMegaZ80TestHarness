@@ -29,44 +29,44 @@ holding reset high
 T_cycle = 2 M_cycle = 1
 T_cycle = 3 M_cycle = 1
 High=3 Low=3...Status=RD MREQ M1 
-T_cycle = 1 M_cycle = 1
+T_cycle = 3 M_cycle = 1
 Address set to=1100001000011000
 Setting data bus to 1110110
 High=4 Low=4...Status=RD MREQ M1 
-T_cycle = 1 M_cycle = 1
+T_cycle = 3 M_cycle = 1
 Address set to=1100001000011000
 Setting data bus to 1110110
 High=5 Low=5...Status=MREQ REFRESH 
-T_cycle = 2 M_cycle = 1
-High=6 Low=6...Status=REFRESH 
-T_cycle = 3 M_cycle = 1
 T_cycle = 4 M_cycle = 2
+High=6 Low=6...Status=REFRESH 
 T_cycle = 5 M_cycle = 3
-High=9 Low=9...Status=BUSAK 
 T_cycle = 6 M_cycle = 4
-High=10 Low=10...Status=BUSAK 
 T_cycle = 7 M_cycle = 5
-High=11 Low=11...Status=RD WR BUSAK 
+High=9 Low=9...Status=BUSAK 
 T_cycle = 8 M_cycle = 6
-High=12 Low=12...Status=WR BUSAK 
+High=10 Low=10...Status=BUSAK 
 T_cycle = 9 M_cycle = 7
-High=13 Low=13...Status=RD WR IOREQ MREQ BUSAK 
+High=11 Low=11...Status=WR BUSAK 
 T_cycle = 10 M_cycle = 8
-High=14 Low=14...Status=RD WR IOREQ MREQ BUSAK 
+High=12 Low=12...Status=RD WR IOREQ MREQ BUSAK 
 T_cycle = 11 M_cycle = 9
-High=15 Low=15...Status=RD WR IOREQ MREQ BUSAK 
+High=13 Low=13...Status=RD WR IOREQ MREQ BUSAK 
 T_cycle = 12 M_cycle = 10
-High=16 Low=16...Status=RD WR IOREQ MREQ BUSAK 
+High=14 Low=14...Status=RD WR IOREQ MREQ BUSAK 
 T_cycle = 13 M_cycle = 11
-High=17 Low=17...Status=RD WR IOREQ MREQ BUSAK 
+High=15 Low=15...Status=RD WR IOREQ MREQ BUSAK 
 T_cycle = 14 M_cycle = 12
-High=18 Low=18...Status=RD WR IOREQ MREQ BUSAK 
+High=16 Low=16...Status=RD WR IOREQ MREQ BUSAK 
 T_cycle = 15 M_cycle = 13
-High=19 Low=19...Status=RD WR IOREQ MREQ BUSAK 
+High=17 Low=17...Status=RD WR IOREQ MREQ BUSAK 
 T_cycle = 16 M_cycle = 14
-High=20 Low=20...Status=RD WR IOREQ MREQ BUSAK 
+High=18 Low=18...Status=RD WR IOREQ MREQ BUSAK 
 T_cycle = 17 M_cycle = 15
-
+High=19 Low=19...Status=RD WR IOREQ MREQ BUSAK 
+T_cycle = 18 M_cycle = 16
+High=20 Low=20...Status=RD WR IOREQ MREQ BUSAK 
+T_cycle = 19 M_cycle = 17
+High=21 Low=2
 
 */
 
@@ -354,7 +354,6 @@ void loop()
   if (MachineOne == true) 
   {
     M_cycle = 1;
-    T_cycle = 1;
   }
   else
   {
