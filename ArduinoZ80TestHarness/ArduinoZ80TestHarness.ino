@@ -21,78 +21,49 @@ SOFTWARE.
 
 Ardiuno Mega test harness for Z80A CPU
 
-There are two outputs switchable by commenting in the line adjacent to       
-      //uint8_t dataBus = 0; // 0 =  nop instruction
-      uint8_t dataBus = 0x76; // 0x76 is halt
-      outputToDataPins(dataBus);
+Not all cycles are implemented, can write a program and put in the Z80_RAM[]
+in function "initialiseProgram()"
 
-One sets the instruction on data bus to nop = 0, the other to halt.
-If 0x76 is set on the data bus then the following output is seee in the serial debug 
-(as expected the HALT pin goes active, and although the PC increments by one it stops)
+currently only have nops followed by HALT, all the machine cycles will be implemented eventually
+1) instruction op code fetch
+2) memory read or write
+3) Input or output cycles
+4) Interrupt request / ack
+5) bus request / ack
 
-holding reset low 
-holding reset high
-RD MREQ M1 Address set to=0
-Setting data bus to 76
-RD MREQ M1 Address set to=0
-Setting data bus to 76
-MREQ REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-MREQ HALT REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-MREQ HALT REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-MREQ HALT REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-MREQ HALT REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-MREQ HALT REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-
-If the nop is set, then the following is seen, the address bus increments to full 16bits:
+this is the output for that extremely simple program:
 
 holding reset low 
 holding reset high
 RD MREQ M1 Address set to=0
-Setting data bus to 76
+Setting data bus to 0
 RD MREQ M1 Address set to=0
+Setting data bus to 0
+MREQ REFRESH REFRESH RD MREQ M1 Address set to=1
+Setting data bus to 0
+RD MREQ M1 Address set to=1
+Setting data bus to 0
+MREQ REFRESH REFRESH RD MREQ M1 Address set to=2
+Setting data bus to 0
+RD MREQ M1 Address set to=2
+Setting data bus to 0
+MREQ REFRESH REFRESH RD MREQ M1 Address set to=3
+Setting data bus to 0
+RD MREQ M1 Address set to=3
+Setting data bus to 0
+MREQ REFRESH REFRESH RD MREQ M1 Address set to=4
+Setting data bus to 0
+RD MREQ M1 Address set to=4
+Setting data bus to 0
+MREQ REFRESH REFRESH RD MREQ M1 Address set to=5
+Setting data bus to 0
+RD MREQ M1 Address set to=5
+Setting data bus to 0
+MREQ REFRESH REFRESH RD MREQ M1 Address set to=6
 Setting data bus to 76
-MREQ REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
+RD MREQ M1 Address set to=6
 Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-MREQ HALT REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-MREQ HALT REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-MREQ HALT REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-MREQ HALT REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-MREQ HALT REFRESH HALT REFRESH RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
-RD MREQ HALT M1 Address set to=1
-Setting data bus to 76
+MREQ REFRESH HALT 
 
 
 This now is the basis for a z80 test harness where the all machine cycles can be 
@@ -101,10 +72,13 @@ implemented and emulate RAM (data and program code.
 
 */
 
+// give it 1K of RAM, should be enough for program and some data
+uint8_t Z80_RAM[1024];
+uint16_t addressBus = 0;
+
 
 #define NUMBER_OF_ADDRESS_PINS 16
 #define NUMBER_OF_DATA_PINS 8
-
 int addressPins[NUMBER_OF_ADDRESS_PINS] = {22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52};
 int dataPins[NUMBER_OF_DATA_PINS] = {14,15,16,17,18,19,20,21};
 
@@ -185,6 +159,18 @@ void toggleClock()
   delay(250);
 }
 
+void initialiseProgram()
+{
+  // ok so write a simple machine code program
+  Z80_RAM[0] = 0x0;
+  Z80_RAM[1] = 0x0;
+  Z80_RAM[2] = 0x0;
+  Z80_RAM[3] = 0x0;
+  Z80_RAM[4] = 0x0;
+  Z80_RAM[5] = 0x0;
+  Z80_RAM[6] = 0x76;
+}
+
 
 void setAddressPinsToInput()
 {
@@ -254,9 +240,11 @@ void setup() {
   
   setAddressPinsToInput();
   setDataToInput();
+  initialiseProgram();
   // to reset z80 the reset must be held active (low) for a minimum of 3 clock cycles
   // then set to high after
   resetCPU();
+  
 
 }
 
@@ -300,8 +288,7 @@ void readStatus()
 }
 
 void printCurrentAddressBus()
-{
-    uint16_t addressBus = 0;
+{    
     for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
     {
         addressBus <<= 1;
@@ -311,6 +298,8 @@ void printCurrentAddressBus()
     Serial.print(addressBus,HEX); 
     Serial.println();
 }
+
+
 
 // we need to keep track of Timing cycle and Machine cycle 
 int T_cycle = 1; // cycles from 1 to 4 on an instruction fetch, other cycles may be longer
@@ -334,7 +323,12 @@ void loop()
   if (writeEn == true) Serial.print("WR ");
   if (ioRequest == true) Serial.print("IOREQ ");
   if (memRequest== true) Serial.print("MREQ ");
-  if (haltSet== true) Serial.print("HALT ");
+  if (haltSet== true) 
+  {
+    Serial.print("HALT ");
+    delay(10000);
+    exit(0); // seems fair to exit the test harness at this point!
+  }
   if (MachineOne== true) Serial.print("M1 ");
   if (refreshSet== true) Serial.print("REFRESH ");
   if (busAckSet== true) Serial.print("BUSAK ");   
@@ -342,8 +336,6 @@ void loop()
   if (memRequest && MachineOne && readEn) 
   {
       printCurrentAddressBus();
-      uint8_t dataBus = 0; // 0 =  nop instruction
-      //uint8_t dataBus = 0x76; // 0x76 is halt
-      outputToDataPins(dataBus);
+      outputToDataPins(Z80_RAM[addressBus]);
   }     
 }
