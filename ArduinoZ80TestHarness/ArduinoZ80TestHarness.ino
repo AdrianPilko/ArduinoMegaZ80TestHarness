@@ -21,52 +21,60 @@ SOFTWARE.
 
 Ardiuno Mega test harness for Z80A CPU
 
-This code doesn't work yet, currently get (incorrect) output:
-The address buss should be set to zero after the reset, but it's not!
-
+Current output (some pint statements commented out (ie the flags)
+The address bus counts up as expected:
 holding reset low 
 holding reset high
-T_cycle = 2 M_cycle = 1
-T_cycle = 3 M_cycle = 1
-High=3 Low=3...Status=RD MREQ M1 
-T_cycle = 3 M_cycle = 1
-Address set to=1100001000011000
-Setting data bus to 1110110
-High=4 Low=4...Status=RD MREQ M1 
-T_cycle = 3 M_cycle = 1
-Address set to=1100001000011000
-Setting data bus to 1110110
-High=5 Low=5...Status=MREQ REFRESH 
-T_cycle = 4 M_cycle = 2
-High=6 Low=6...Status=REFRESH 
-T_cycle = 5 M_cycle = 3
-T_cycle = 6 M_cycle = 4
-T_cycle = 7 M_cycle = 5
-High=9 Low=9...Status=BUSAK 
-T_cycle = 8 M_cycle = 6
-High=10 Low=10...Status=BUSAK 
-T_cycle = 9 M_cycle = 7
-High=11 Low=11...Status=WR BUSAK 
-T_cycle = 10 M_cycle = 8
-High=12 Low=12...Status=RD WR IOREQ MREQ BUSAK 
-T_cycle = 11 M_cycle = 9
-High=13 Low=13...Status=RD WR IOREQ MREQ BUSAK 
-T_cycle = 12 M_cycle = 10
-High=14 Low=14...Status=RD WR IOREQ MREQ BUSAK 
-T_cycle = 13 M_cycle = 11
-High=15 Low=15...Status=RD WR IOREQ MREQ BUSAK 
-T_cycle = 14 M_cycle = 12
-High=16 Low=16...Status=RD WR IOREQ MREQ BUSAK 
-T_cycle = 15 M_cycle = 13
-High=17 Low=17...Status=RD WR IOREQ MREQ BUSAK 
-T_cycle = 16 M_cycle = 14
-High=18 Low=18...Status=RD WR IOREQ MREQ BUSAK 
-T_cycle = 17 M_cycle = 15
-High=19 Low=19...Status=RD WR IOREQ MREQ BUSAK 
-T_cycle = 18 M_cycle = 16
-High=20 Low=20...Status=RD WR IOREQ MREQ BUSAK 
-T_cycle = 19 M_cycle = 17
-High=21 Low=2
+Address set to=0
+Address set to=0
+Address set to=1
+Address set to=1
+Address set to=2
+Address set to=2
+Address set to=3
+Address set to=3
+Address set to=4
+Address set to=4
+Address set to=5
+Address set to=5
+Address set to=6
+Address set to=6
+Address set to=7
+Address set to=7
+Address set to=8
+Address set to=8
+Address set to=9
+Address set to=9
+Address set to=A
+Address set to=A
+Address set to=B
+Address set to=B
+Address set to=C
+Address set to=C
+Address set to=D
+Address set to=D
+Address set to=E
+Address set to=E
+Address set to=F
+Address set to=F
+Address set to=10
+Address set to=10
+Address set to=11
+Address set to=11
+Address set to=12
+Address set to=12
+Address set to=13
+Address set to=13
+Address set to=14
+Address set to=14
+Address set to=15
+Address set to=15
+Address set to=16
+Address set to=16
+Address set to=17
+Address set to=17
+Address set to=18
+
 
 */
 
@@ -75,7 +83,8 @@ High=21 Low=2
 #define NUMBER_OF_DATA_PINS 8
 
 int addressPins[NUMBER_OF_ADDRESS_PINS] = {22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52};
-int dataPins[NUMBER_OF_DATA_PINS] = {14,15,16,17,18,19,20,21};
+//int dataPins[NUMBER_OF_DATA_PINS] = {14,15,16,17,18,19,20,21};
+int dataPins[NUMBER_OF_DATA_PINS] = {21,20,19,18,17,16,15,14};
 int CLK = 49; 
 
 int HALT = 4; // pin 18 on Z80 // output from z80
@@ -159,7 +168,7 @@ void setAddressPinsToInput()
 {
   for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
   {
-    pinMode(addressPins[i+addressPins[0]], INPUT);      
+    pinMode(addressPins[i], INPUT);      
   }
 }
   
@@ -168,7 +177,7 @@ void  setDataToOutput()
     // set pin mode to INPUT
     for (int i = 0; i < NUMBER_OF_DATA_PINS; i++)
     {
-        pinMode(dataPins[i+dataPins[0]], OUTPUT);
+        pinMode(dataPins[i], OUTPUT);
     }
 }
 void  setDataToInput()
@@ -176,13 +185,12 @@ void  setDataToInput()
     // set pin mode to INPUT
     for (int i = 0; i < NUMBER_OF_DATA_PINS; i++)
     {
-        pinMode(dataPins[i+dataPins[0]], INPUT);
+        pinMode(dataPins[i], INPUT);
     }
 }
 
 void resetCPU()
 {
-  toggleClockFaster();    
   digitalWrite(RESET, LOW);    
   toggleClock();    
   Serial.println("holding reset low ");
@@ -194,7 +202,6 @@ void resetCPU()
   Serial.println("holding reset high");
   digitalWrite(RESET, HIGH); 
   toggleClock();   
-  delay(1000);
 }
 
 void setup() {
@@ -217,12 +224,12 @@ void setup() {
   
   pinMode(readEnable, INPUT);   
   pinMode(writeEnable, INPUT);
-  
+
   digitalWrite(BUSRQ,HIGH);
   digitalWrite(WAIT,HIGH);
   digitalWrite(NMI,HIGH);
   digitalWrite(INT,HIGH);
-
+  
   setAddressPinsToInput();
   setDataToInput();
   // to reset z80 the reset must be held active (low) for a minimum of 3 clock cycles
@@ -234,14 +241,14 @@ void setup() {
 void outputToDataPins(uint8_t val)
 {       
     setDataToOutput();
-    Serial.print("Setting data bus to ");
-    Serial.println(val,BIN);    
+    //Serial.print("Setting data bus to ");
+    //Serial.println(val,HEX);    
     
     for (int i = NUMBER_OF_DATA_PINS; i >= 0; i--)
     {
       uint8_t thebit = val & 0x01;
       
-      digitalWrite(dataPins[i+dataPins[0]], thebit);       
+      digitalWrite(dataPins[i], thebit);       
 
       val >>= 1;
     }   
@@ -253,7 +260,7 @@ uint8_t readFromDataPins()
     setDataToInput();
     for (int i = 0; i < NUMBER_OF_DATA_PINS; i++)
     {
-        rv |= digitalRead(dataPins[i+dataPins[0]]) << i;       
+        rv |= digitalRead(dataPins[i]) << i;       
     }   
     return rv;
 }
@@ -271,12 +278,13 @@ void readStatus()
 
   if (ioRequest || memRequest || haltSet || MachineOne || refreshSet || busAckSet)
   { 
+ #if 0 
     Serial.print("High=");
     Serial.print(clockHighCount);
     Serial.print(" Low=");
     Serial.print(clockLowCount);    
     Serial.print("...Status=");
-    
+
     if (readEn == true) Serial.print("RD ");
     if (writeEn == true) Serial.print("WR ");
     if (ioRequest == true) Serial.print("IOREQ ");
@@ -286,42 +294,8 @@ void readStatus()
     if (refreshSet== true) Serial.print("REFRESH ");
     if (busAckSet== true) Serial.print("BUSAK ");
     Serial.println();
+#endif        
   }
-}
-
-void runCPUCycle()
-{  
-  uint16_t addressBus = 0;
-  uint8_t dataBus = 0;
- 
-  if (readEn)
-  { 
-    // this means the Z80 is trying to read from the address on the address bus
-    for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
-    {
-        addressBus |= digitalRead(addressPins[i+22]) << i;       
-    }
-    dataBus = 0x00; // 0x00 is nop instruction
-    //dataBus = 0x76; // 0x76 is halt
-
-    //outputToDataPins(dataBus);    
-    Serial.print("Address bus = ");
-    Serial.print(addressBus,BIN);
-    //Serial.print("\t\t Writing value to data = ");
-    //Serial.print(dataBus,BIN);    
-    Serial.println();
-  }
-  
-  if (writeEn)  
-  {  // this means Z80 trying to send some data to data pins, so get arduino to read it
-    for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
-    {
-        addressBus |= digitalRead(addressPins[i+22]) << i;       
-    }    
-    Serial.print(addressBus,BIN);        
-    dataBus = readFromDataPins();
-    Serial.println(dataBus, BIN);    
-  }    
 }
 
 void printCurrentAddressBus()
@@ -330,10 +304,10 @@ void printCurrentAddressBus()
     for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
     {
         addressBus <<= 1;
-        addressBus |= digitalRead(addressPins[i+addressPins[0]]);       
+        addressBus |= digitalRead(addressPins[i]);       
     }
     Serial.print("Address set to=");
-    Serial.print(addressBus,BIN); 
+    Serial.print(addressBus,HEX); 
     Serial.println();
 }
 
@@ -343,35 +317,25 @@ int M_cycle = 1; // M state cycles through (as far as I can tell M1 opcode fetch
 
 void loop() 
 {    
-  
-  //runCPUCycle();    
+  digitalWrite(BUSRQ,HIGH);
+  digitalWrite(WAIT,HIGH);
+  digitalWrite(NMI,HIGH);
+  digitalWrite(INT,HIGH); 
+
   setClock(HIGH);
   clockHighCount++;
-  delay(250);
+  delay(10);
   setClock(LOW);
+  delay(10);
+
   clockLowCount++;
   readStatus();
-  if (MachineOne == true) 
-  {
-    M_cycle = 1;
-  }
-  else
-  {
-    T_cycle++;
-    if (T_cycle >= 4) M_cycle++;
-  }
-  Serial.print("T_cycle = ");
-  Serial.print(T_cycle);
-  Serial.print(" M_cycle = ");
-  Serial.println(M_cycle);  
-  
   if (memRequest && MachineOne && readEn) 
   {
       printCurrentAddressBus();
       
-      uint8_t dataBus = 0x76; // 0x00 is nop instruction
+      uint8_t dataBus = 0; // 0 =  nop instruction
       //dataBus = 0x76; // 0x76 is halt
-      outputToDataPins(dataBus);    
-  }   
-  if (clockLowCount > 20) exit(0);
+      outputToDataPins(dataBus);
+  }     
 }
