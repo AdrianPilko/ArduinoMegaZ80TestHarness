@@ -33,37 +33,6 @@ currently only have nops followed by HALT, all the machine cycles will be implem
 
 this is the output for that extremely simple program:
 
-holding reset low 
-holding reset high
-RD MREQ M1 Address set to=0
-Setting data bus to 0
-RD MREQ M1 Address set to=0
-Setting data bus to 0
-MREQ REFRESH REFRESH RD MREQ M1 Address set to=1
-Setting data bus to 0
-RD MREQ M1 Address set to=1
-Setting data bus to 0
-MREQ REFRESH REFRESH RD MREQ M1 Address set to=2
-Setting data bus to 0
-RD MREQ M1 Address set to=2
-Setting data bus to 0
-MREQ REFRESH REFRESH RD MREQ M1 Address set to=3
-Setting data bus to 0
-RD MREQ M1 Address set to=3
-Setting data bus to 0
-MREQ REFRESH REFRESH RD MREQ M1 Address set to=4
-Setting data bus to 0
-RD MREQ M1 Address set to=4
-Setting data bus to 0
-MREQ REFRESH REFRESH RD MREQ M1 Address set to=5
-Setting data bus to 0
-RD MREQ M1 Address set to=5
-Setting data bus to 0
-MREQ REFRESH REFRESH RD MREQ M1 Address set to=6
-Setting data bus to 76
-RD MREQ M1 Address set to=6
-Setting data bus to 76
-MREQ REFRESH HALT 
 
 
 This now is the basis for a z80 test harness where the all machine cycles can be 
@@ -73,8 +42,10 @@ implemented and emulate RAM (data and program code.
 */
 
 // give it 1K of RAM, should be enough for program and some data
-uint8_t Z80_RAM[1024];
+#define SIZE_OF_RAM 1024
+uint8_t Z80_RAM[SIZE_OF_RAM];
 uint16_t addressBus = 0;
+uint8_t dataBus;
 
 
 #define NUMBER_OF_ADDRESS_PINS 16
@@ -82,7 +53,7 @@ uint16_t addressBus = 0;
 int addressPins[NUMBER_OF_ADDRESS_PINS] = {22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52};
 int dataPins[NUMBER_OF_DATA_PINS] = {14,15,16,17,18,19,20,21};
 
-int CLK = 49; 
+int CLK = 12; 
 int HALT = 4; // pin 18 on Z80 // output from z80
 int MREQ = 3; // pin 19 on Z80 // output from z80
 int IORQ = 2; // pin 20 on z80 // output from z80
@@ -159,19 +130,6 @@ void toggleClock()
   delay(250);
 }
 
-void initialiseProgram()
-{
-  // ok so write a simple machine code program
-  Z80_RAM[0] = 0x0;
-  Z80_RAM[1] = 0x0;
-  Z80_RAM[2] = 0x0;
-  Z80_RAM[3] = 0x0;
-  Z80_RAM[4] = 0x0;
-  Z80_RAM[5] = 0x0;
-  Z80_RAM[6] = 0x76;
-}
-
-
 void setAddressPinsToInput()
 {
   for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
@@ -182,7 +140,7 @@ void setAddressPinsToInput()
   
 void  setDataToOutput()
 {
-    // set pin mode to INPUT
+    // set pin mode to OUTPUT
     for (int i = 0; i < NUMBER_OF_DATA_PINS; i++)
     {
         pinMode(dataPins[i], OUTPUT);
@@ -200,21 +158,23 @@ void  setDataToInput()
 void resetCPU()
 {
   digitalWrite(RESET, LOW);    
-  toggleClock();    
-  Serial.println("holding reset low ");
+  Serial.println("resetCPU");
   for (int i = 0; i < 24; i++)
   {
-    toggleClock();    
+    setClock(HIGH);
+    clockHighCount++;
+    delay(10);
+    setClock(LOW);
+    delay(10);
+    clockLowCount++;
     digitalWrite(RESET, LOW);
   }
-  Serial.println("holding reset high");
   digitalWrite(RESET, HIGH); 
-  toggleClock();   
 }
 
 void setup() {
   // initialize serial communication at 9600 bits per second:
-  Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(RESET, OUTPUT);   // remember that the INPUT / OUTPUT is from the point of view of the Arduino  
   pinMode(CLK, OUTPUT);
 
@@ -251,9 +211,7 @@ void setup() {
 void outputToDataPins(uint8_t val)
 {       
     setDataToOutput();
-    Serial.print("Setting data bus to ");
-    Serial.println(val,HEX);    
-    
+     
     for (int i = 0; i < NUMBER_OF_DATA_PINS; i++)
     {
       uint8_t thebit = val & 0x01;
@@ -285,45 +243,12 @@ void readStatus()
   MachineOne = !digitalRead(M1);
   refreshSet = !digitalRead(REFRESH);
   busAckSet = !digitalRead(BUSAK);
-}
 
-void printCurrentAddressBus()
-{    
-    for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
-    {
-        addressBus <<= 1;
-        addressBus |= digitalRead(addressPins[i]);       
-    }
-    Serial.print("Address set to=");
-    Serial.print(addressBus,HEX); 
-    Serial.println();
-}
-
-
-
-// we need to keep track of Timing cycle and Machine cycle 
-int T_cycle = 1; // cycles from 1 to 4 on an instruction fetch, other cycles may be longer
-int M_cycle = 1; // M state cycles through (as far as I can tell M1 opcode fetch, M2 - memory read,  M3 - memory write
-
-void loop() 
-{    
-  digitalWrite(BUSRQ,HIGH);
-  digitalWrite(WAIT,HIGH);
-  digitalWrite(NMI,HIGH);
-  digitalWrite(INT,HIGH); 
-
-  setClock(HIGH);
-  clockHighCount++;
-  delay(10);
-  setClock(LOW);
-  delay(10);
-  clockLowCount++;
-  readStatus();
   if (readEn == true) Serial.print("RD ");
   if (writeEn == true) Serial.print("WR ");
   if (ioRequest == true) Serial.print("IOREQ ");
-  if (memRequest== true) Serial.print("MREQ ");
-  if (haltSet== true) 
+  if (memRequest == true) Serial.print("MREQ ");
+  if (haltSet == true) 
   {
     Serial.print("HALT ");
     delay(10000);
@@ -333,9 +258,98 @@ void loop()
   if (refreshSet== true) Serial.print("REFRESH ");
   if (busAckSet== true) Serial.print("BUSAK ");   
   
-  if (memRequest && MachineOne && readEn) 
-  {
-      printCurrentAddressBus();
-      outputToDataPins(Z80_RAM[addressBus]);
+}
+
+void readAddressBus()
+{    
+    for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
+    {
+        addressBus <<= 1;
+        addressBus |= digitalRead(addressPins[i]);       
+    }
+}
+
+void printAddressAndDataBus()
+{
+  Serial.print("0x");
+  Serial.print(addressBus,HEX); 
+  if(writeEn)  
+    Serial.print(" W "); 
+  else
+    Serial.print(" R "); 
+  Serial.print("0x");
+  Serial.print(dataBus,HEX); 
+  Serial.println();
+}
+
+// we need to keep track of Timing cycle and Machine cycle 
+int T_cycle = 1; // cycles from 1 to 4 on an instruction fetch, other cycles may be longer
+int M_cycle = 1; // M state cycles through (as far as I can tell M1 opcode fetch, M2 - memory read,  M3 - memory write
+
+
+void initialiseProgram()
+{
+  // ok so write a simple machine code program
+  Z80_RAM[0] = 0x06;
+  Z80_RAM[1] = 0x50;
+  Z80_RAM[2] = 0x3e;
+  Z80_RAM[3] = 0x51;
+  Z80_RAM[4] = 0x80;
+  Z80_RAM[20] = 0x76;
+  Z80_RAM[0x50] = 0x1d;
+  Z80_RAM[0x50] = 0x1e;
+}
+
+void loop() 
+{    
+  digitalWrite(BUSRQ,HIGH);
+  digitalWrite(WAIT,HIGH);
+  digitalWrite(NMI,HIGH);
+  digitalWrite(INT,HIGH); 
+  
+  setDataToOutput();
+
+  setClock(HIGH);
+  delay(50);
+  setClock(LOW);
+  readStatus();
+  delay(50);
+  
+
+  if ((MachineOne) && (memRequest))
+  {    
+      if (readEn)
+      {
+         setDataToOutput();  
+         readAddressBus();
+         dataBus = Z80_RAM[addressBus];
+         outputToDataPins(dataBus);
+      }
   }     
+  else if (readEn)
+  {
+      setDataToOutput();  
+      readAddressBus(); 
+      dataBus = Z80_RAM[addressBus];        
+      outputToDataPins(dataBus);
+  }
+  else if (writeEn)
+  {
+    setDataToInput();
+      readAddressBus();
+      if (addressBus < SIZE_OF_RAM)
+      {
+        dataBus = Z80_RAM[addressBus] =  readFromDataPins();
+      }  
+  }
+  printAddressAndDataBus();
+
+  readEn = false;
+  writeEn = false;
+  ioRequest = false;
+  memRequest = false;
+  haltSet = false;
+  MachineOne = false;
+  refreshSet = false;
+  busAckSet = false;
 }
