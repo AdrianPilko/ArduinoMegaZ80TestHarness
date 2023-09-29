@@ -218,13 +218,13 @@ void readAddressBus()
 
 void printAddressAndDataBus()
 {
-  Serial.print("0x");
+  Serial.print("Address bus = 0x");
   Serial.print(addressBus,HEX); 
   if(writeEn)  
     Serial.print(" W "); 
   else
     Serial.print(" R "); 
-  Serial.print("0x");
+  Serial.print(" DataBus = 0x");
   Serial.print(dataBus,HEX); 
   Serial.println();
 }
@@ -237,21 +237,22 @@ int M_cycle = 1; // M state cycles through (as far as I can tell M1 opcode fetch
 void initialiseProgram()
 {
   // ok so write a simple machine code program
-#if 0  
   Z80_RAM[0] = 0x06;
   Z80_RAM[1] = 0x50;
   Z80_RAM[2] = 0x3e;
   Z80_RAM[3] = 0x51;
   Z80_RAM[4] = 0x80;
-  Z80_RAM[20] = 0x76;
+  Z80_RAM[5] = 0x76;
   Z80_RAM[0x50] = 0x1d;
-  Z80_RAM[0x50] = 0x1e;
-#endif
+  Z80_RAM[0x51] = 0x1e;
+/*   simple nop and halt code to test databus
   Z80_RAM[0] = 0x00;
   Z80_RAM[1] = 0x00;
   Z80_RAM[2] = 0x00;
   Z80_RAM[3] = 0x00;
   Z80_RAM[4] = 0x76;
+*/
+  
 }
 
 bool lastClock = false;
@@ -317,7 +318,7 @@ void loop()
         outputToDataPins(dataBus);
         printAddressAndDataBus();
       }     
-      else if (readEn)
+      else if ((readEn) && (memRequest))
       {
           printStatus();
           setDataToOutput();  
@@ -333,7 +334,7 @@ void loop()
           outputToDataPins(dataBus);
           printAddressAndDataBus();
       }
-      else if (writeEn)
+      else if ((writeEn) && (memRequest))
       {
         printStatus();
         setDataToInput();
