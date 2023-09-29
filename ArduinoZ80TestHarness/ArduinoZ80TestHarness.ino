@@ -303,7 +303,8 @@ int M_cycle = 1; // M state cycles through (as far as I can tell M1 opcode fetch
 
 void initialiseProgram()
 {
-  // s simple machine code program adds two 8 bit numbers
+/*
+  // s simple machine code program adds two 8 bit numbers and store in 3 locations
   
   Z80_RAM[0] = 0x06;  // ld b, n  (take conents of next memory address as operand)
   Z80_RAM[1] = 0x11;  
@@ -311,9 +312,32 @@ void initialiseProgram()
   Z80_RAM[3] = 0x22;  
   Z80_RAM[4] = 0x80;  // add, a,b  stores result in a
   Z80_RAM[5] = 0x32;  // ld (nn), a  (takes next two memory locations as 
-  Z80_RAM[6] = 0x0c;  // 
+  Z80_RAM[6] = 0x1c;  // 
   Z80_RAM[7] = 0x00;  // 
-  Z80_RAM[8] = 0x76;
+  Z80_RAM[8] = 0x32;  // ld (nn), a  (takes next two memory locations as 
+  Z80_RAM[9] = 0x1d;  // 
+  Z80_RAM[10] = 0x00;  // 
+  Z80_RAM[11] = 0x32;  // ld (nn), a  (takes next two memory locations as 
+  Z80_RAM[12] = 0x1e;  // 
+  Z80_RAM[13] = 0x00;  // 
+  Z80_RAM[14] = 0x76;
+*/  
+
+// s simple machine code program loops 255  incrementing "a" and 
+// using djnz (auto decrement b and test zero  
+  Z80_RAM[0] = 0x06;  // ld b, n  (take conents of next memory address as operand)
+  Z80_RAM[1] = 0xff;  
+  Z80_RAM[2] = 0xaf;  // xor a , this zeros a
+  Z80_RAM[3] = 0x3c;  // inc c
+  Z80_RAM[4] = 0x10;  // djnz 
+  Z80_RAM[5] = 0xfd;  // relative jump location (twos compliment = -2)
+  Z80_RAM[6] = 0x32;  // ld (nn), a  (takes next two memory locations as 
+  Z80_RAM[7] = 0x1d;  // 
+  Z80_RAM[8] = 0x00;  // 
+  Z80_RAM[9] = 0x32;  // ld (nn), a  (takes next two memory locations as 
+  Z80_RAM[10] = 0x1e;  // 
+  Z80_RAM[11] = 0x00;  // 
+  Z80_RAM[12] = 0x76;
   
 /*   simple nop and halt code to test databus
   Z80_RAM[0] = 0x00;
@@ -367,7 +391,7 @@ void loop()
     
     if (refreshSet == true)
     {
-      // do thothing!!!
+      // do nothing!!!
     }
     else
     {
