@@ -199,12 +199,26 @@ void printStatus()
   if (haltSet == true) 
   {
     Serial.print("HALT ");
+    printFirst32MemeoryLocations();
     delay(10000);
     exit(0); // seems fair to exit the test harness at this point!
   }
   if (MachineOne== true) Serial.print("M1 ");
   if (refreshSet== true) Serial.print("REFRESH ");
   if (busAckSet== true) Serial.print("BUSAK ");   
+}
+
+void printFirst32MemeoryLocations()
+{
+  Serial.println();
+  Serial.println("Memory contents");
+  for (int i = 0; i < 32; i++)
+  {
+    Serial.print("address = 0x");
+    Serial.print(i, HEX);
+    Serial.print("\t0x");
+    Serial.println(Z80_RAM[i], HEX);
+  }
 }
 
 void readAddressBus()
@@ -236,15 +250,20 @@ int M_cycle = 1; // M state cycles through (as far as I can tell M1 opcode fetch
 
 void initialiseProgram()
 {
-  // ok so write a simple machine code program
-  Z80_RAM[0] = 0x06;
-  Z80_RAM[1] = 0x50;
-  Z80_RAM[2] = 0x3e;
-  Z80_RAM[3] = 0x51;
-  Z80_RAM[4] = 0x80;
-  Z80_RAM[5] = 0x76;
-  Z80_RAM[0x50] = 0x1d;
-  Z80_RAM[0x51] = 0x1e;
+  // s simple machine code program adds two 8 bit numbers
+  
+  Z80_RAM[0] = 0x06;  // ld b, n  (take conents of next memory address as operand)
+  Z80_RAM[1] = 0x50;  
+  Z80_RAM[2] = 0x3e;  // ld a, n  (take conents of next memory address as operand)
+  Z80_RAM[3] = 0x51;  
+  Z80_RAM[4] = 0x80;  // add, a,b  stores result in a
+  Z80_RAM[5] = 0x32;  // ld (nn), a  (takes next two memory locations as 
+  Z80_RAM[6] = 0x0c;  // 
+  Z80_RAM[7] = 0x00;  // 
+  Z80_RAM[8] = 0x76;
+  Z80_RAM[0x50] = 0;
+  Z80_RAM[0x50] = 0;
+  
 /*   simple nop and halt code to test databus
   Z80_RAM[0] = 0x00;
   Z80_RAM[1] = 0x00;
@@ -305,6 +324,7 @@ void loop()
     {
       if ((MachineOne) && (memRequest) && (readEn))
       {   
+        Serial.print("****OP FETCH\t");
         printStatus(); 
         setDataToOutput();  
         readAddressBus();
@@ -320,6 +340,7 @@ void loop()
       }     
       else if ((readEn) && (memRequest))
       {
+          Serial.print("****READ\t");
           printStatus();
           setDataToOutput();  
           readAddressBus();
@@ -327,6 +348,7 @@ void loop()
           if (addressBus > SIZE_OF_RAM)
           {
             Serial.print("got address outside RAM");
+            printFirst32MemeoryLocations();
             delay(250);
             exit(0);
           }
@@ -336,6 +358,7 @@ void loop()
       }
       else if ((writeEn) && (memRequest))
       {
+        Serial.print("****WRITE\t");
         printStatus();
         setDataToInput();
         readAddressBus();
