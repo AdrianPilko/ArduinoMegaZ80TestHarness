@@ -50,8 +50,8 @@ uint8_t dataBus;
 
 #define NUMBER_OF_ADDRESS_PINS 16
 #define NUMBER_OF_DATA_PINS 8
-int addressPins[NUMBER_OF_ADDRESS_PINS] = {22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52};
-int dataPins[NUMBER_OF_DATA_PINS] = {14,15,16,17,18,19,20,21};
+int addressPins[NUMBER_OF_ADDRESS_PINS] = {52,50,48,46,44,42,40,38,36,34,32,30,28,26,24,22};
+int dataPins[NUMBER_OF_DATA_PINS] = {15,14,17,20,21,19,18,16};
 
 int CLK = 12; 
 int HALT = 4; // pin 18 on Z80 // output from z80
@@ -80,56 +80,6 @@ bool MachineOne = false;
 bool refreshSet = false;
 bool busAckSet = false;
 
-int clockLowCount = 0;
-int clockHighCount = 0;
-bool currentClockState = LOW;
-
-void toggleClockFaster()
-{
-  // clock  
-  digitalWrite(CLK, currentClockState);
-  if (currentClockState == HIGH) 
-  {
-    currentClockState = LOW;
-  }
-  else
-  {    
-    currentClockState = HIGH;
-  }
-  delay(10);
-}
-
-void setClock(bool high)
-{
-  // true == high !
-  if (high == true)
-  {
-    digitalWrite(CLK, HIGH);
-  }
-  else
-  {
-    digitalWrite(CLK, LOW);
-  }
-}
-
-void toggleClock()
-{
-  // clock  
-  digitalWrite(CLK, currentClockState);
-  //Serial.print("CLOCK");
-  if (currentClockState == HIGH) 
-  {
-    //Serial.println(" HIGH");
-    currentClockState = LOW;
-  } 
-  else 
-  {
-    //Serial.println(" LOW");
-    currentClockState = HIGH;
-  }
-  delay(250);
-}
-
 void setAddressPinsToInput()
 {
   for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
@@ -157,26 +107,23 @@ void  setDataToInput()
 
 void resetCPU()
 {
-  digitalWrite(RESET, LOW);    
-  Serial.println("resetCPU");
-  for (int i = 0; i < 24; i++)
+    // clock provided externally by 555 timer
+  Serial.println();
+  Serial.println("CPU is in reset, RESET held active");
+  digitalWrite(RESET, LOW);      
+  for (int i = 0; i < 6; i++)
   {
-    setClock(HIGH);
-    clockHighCount++;
-    delay(10);
-    setClock(LOW);
-    delay(10);
-    clockLowCount++;
-    digitalWrite(RESET, LOW);
+    waitExternalClock();
   }
   digitalWrite(RESET, HIGH); 
+  Serial.println("CPU now reset");
 }
 
 void setup() {
   // initialize serial communication at 9600 bits per second:
   Serial.begin(115200);
   pinMode(RESET, OUTPUT);   // remember that the INPUT / OUTPUT is from the point of view of the Arduino  
-  pinMode(CLK, OUTPUT);
+  pinMode(CLK, INPUT);   // to grab 555 timer clock output
 
   
   pinMode(IORQ, INPUT);
@@ -204,8 +151,6 @@ void setup() {
   // to reset z80 the reset must be held active (low) for a minimum of 3 clock cycles
   // then set to high after
   resetCPU();
-  
-
 }
 
 void outputToDataPins(uint8_t val)
@@ -242,8 +187,11 @@ void readStatus()
   haltSet = !digitalRead(HALT);
   MachineOne = !digitalRead(M1);
   refreshSet = !digitalRead(REFRESH);
-  busAckSet = !digitalRead(BUSAK);
+  busAckSet = !digitalRead(BUSAK); 
+}
 
+void printStatus()
+{
   if (readEn == true) Serial.print("RD ");
   if (writeEn == true) Serial.print("WR ");
   if (ioRequest == true) Serial.print("IOREQ ");
@@ -257,7 +205,6 @@ void readStatus()
   if (MachineOne== true) Serial.print("M1 ");
   if (refreshSet== true) Serial.print("REFRESH ");
   if (busAckSet== true) Serial.print("BUSAK ");   
-  
 }
 
 void readAddressBus()
@@ -290,6 +237,7 @@ int M_cycle = 1; // M state cycles through (as far as I can tell M1 opcode fetch
 void initialiseProgram()
 {
   // ok so write a simple machine code program
+#if 0  
   Z80_RAM[0] = 0x06;
   Z80_RAM[1] = 0x50;
   Z80_RAM[2] = 0x3e;
@@ -298,58 +246,113 @@ void initialiseProgram()
   Z80_RAM[20] = 0x76;
   Z80_RAM[0x50] = 0x1d;
   Z80_RAM[0x50] = 0x1e;
+#endif
+  Z80_RAM[0] = 0x00;
+  Z80_RAM[1] = 0x00;
+  Z80_RAM[2] = 0x00;
+  Z80_RAM[3] = 0x00;
+  Z80_RAM[4] = 0x76;
+}
+
+bool lastClock = false;
+int clockTransitionLowHigh = 0;
+
+void waitExternalClock()
+{
+  bool clockTransitioned = false;
+  while (!clockTransitioned)
+  {
+    bool currentClock = digitalRead(CLK);
+    if ((currentClock == false) && (lastClock == true))
+    {
+      Serial.print(clockTransitionLowHigh++);
+      Serial.print("\t\t");
+     
+      readStatus();
+      printStatus(); 
+      Serial.print("\t");
+      readAddressBus();
+      Serial.print("\t");
+      printAddressAndDataBus();
+      clockTransitioned = true;
+    }
+   // if ((currentClock == false) && (lastClock == true)) break;
+    lastClock = currentClock;        
+  }  
 }
 
 void loop() 
-{    
-  digitalWrite(BUSRQ,HIGH);
-  digitalWrite(WAIT,HIGH);
-  digitalWrite(NMI,HIGH);
-  digitalWrite(INT,HIGH); 
+{  
+  while(1)
+  {  
+    digitalWrite(BUSRQ,HIGH);
+    digitalWrite(WAIT,HIGH);
+    digitalWrite(NMI,HIGH);
+    digitalWrite(INT,HIGH); 
+    
+    setDataToOutput();
+    MachineOne = false;
   
-  setDataToOutput();
-
-  setClock(HIGH);
-  delay(50);
-  setClock(LOW);
-  readStatus();
-  delay(50);
   
-
-  if ((MachineOne) && (memRequest))
-  {    
-      if (readEn)
+    waitExternalClock();
+    
+    if (refreshSet == true)
+    {
+      // do thothing!!!
+    }
+    else
+    {
+      if ((MachineOne) && (memRequest) && (readEn))
+      {   
+        printStatus(); 
+        setDataToOutput();  
+        readAddressBus();
+        dataBus = Z80_RAM[addressBus];
+        if (addressBus > SIZE_OF_RAM)
+        {
+          Serial.print("got address outside RAM");
+          delay(250);
+          exit(0);
+        }    
+        outputToDataPins(dataBus);
+        printAddressAndDataBus();
+      }     
+      else if (readEn)
       {
-         setDataToOutput();  
-         readAddressBus();
-         dataBus = Z80_RAM[addressBus];
-         outputToDataPins(dataBus);
+          printStatus();
+          setDataToOutput();  
+          readAddressBus();
+           
+          if (addressBus > SIZE_OF_RAM)
+          {
+            Serial.print("got address outside RAM");
+            delay(250);
+            exit(0);
+          }
+          dataBus = Z80_RAM[addressBus];        
+          outputToDataPins(dataBus);
+          printAddressAndDataBus();
       }
-  }     
-  else if (readEn)
-  {
-      setDataToOutput();  
-      readAddressBus(); 
-      dataBus = Z80_RAM[addressBus];        
-      outputToDataPins(dataBus);
-  }
-  else if (writeEn)
-  {
-    setDataToInput();
-      readAddressBus();
-      if (addressBus < SIZE_OF_RAM)
+      else if (writeEn)
       {
-        dataBus = Z80_RAM[addressBus] =  readFromDataPins();
-      }  
+        printStatus();
+        setDataToInput();
+        readAddressBus();
+        if (addressBus < SIZE_OF_RAM)
+        {
+          dataBus = Z80_RAM[addressBus] =  readFromDataPins();
+        }  
+        printAddressAndDataBus();
+      }
+    }
+  
+    readEn = false;
+    writeEn = false;
+    ioRequest = false;
+    memRequest = false;
+    haltSet = false;
+    MachineOne = false;
+    refreshSet = false;
+    busAckSet = false;
   }
-  printAddressAndDataBus();
-
-  readEn = false;
-  writeEn = false;
-  ioRequest = false;
-  memRequest = false;
-  haltSet = false;
-  MachineOne = false;
-  refreshSet = false;
-  busAckSet = false;
 }
