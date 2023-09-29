@@ -326,7 +326,7 @@ void initialiseProgram()
 // s simple machine code program loops 255  incrementing "a" and 
 // using djnz (auto decrement b and test zero  
   Z80_RAM[0] = 0x06;  // ld b, n  (take conents of next memory address as operand)
-  Z80_RAM[1] = 0xff;  
+  Z80_RAM[1] = 0x05;  
   Z80_RAM[2] = 0xaf;  // xor a , this zeros a
   Z80_RAM[3] = 0x3c;  // inc c
   Z80_RAM[4] = 0x10;  // djnz 
