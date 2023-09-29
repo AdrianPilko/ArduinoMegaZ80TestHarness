@@ -33,10 +33,63 @@ currently only have nops followed by HALT, all the machine cycles will be implem
 
 this is the output for that extremely simple program:
 
+CPU is in reset, RESET held active
 
-
-This now is the basis for a z80 test harness where the all machine cycles can be 
-implemented and emulate RAM (data and program code.
+CPU is in reset, RESET held active
+CPU now reset
+****OP FETCH  RD MREQ M1 Address bus = 0x0 R  DataBus = 0x6
+****OP FETCH  RD MREQ M1 Address bus = 0x0 R  DataBus = 0x6
+****READ  RD MREQ Address bus = 0x1 R  DataBus = 0x11
+****READ  RD MREQ Address bus = 0x1 R  DataBus = 0x11
+****OP FETCH  RD MREQ M1 Address bus = 0x2 R  DataBus = 0x3E
+****OP FETCH  RD MREQ M1 Address bus = 0x2 R  DataBus = 0x3E
+****READ  RD MREQ Address bus = 0x3 R  DataBus = 0x22
+****READ  RD MREQ Address bus = 0x3 R  DataBus = 0x22
+****OP FETCH  RD MREQ M1 Address bus = 0x4 R  DataBus = 0x80
+****OP FETCH  RD MREQ M1 Address bus = 0x4 R  DataBus = 0x80
+****OP FETCH  RD MREQ M1 Address bus = 0x5 R  DataBus = 0x32
+****OP FETCH  RD MREQ M1 Address bus = 0x5 R  DataBus = 0x32
+****READ  RD MREQ Address bus = 0x6 R  DataBus = 0xC
+****READ  RD MREQ Address bus = 0x6 R  DataBus = 0xC
+****READ  RD MREQ Address bus = 0x7 R  DataBus = 0x0
+****READ  RD MREQ Address bus = 0x7 R  DataBus = 0x0
+****WRITE WR MREQ Address bus = 0xC W  DataBus = 0x33
+****OP FETCH  RD MREQ M1 Address bus = 0x8 R  DataBus = 0x76
+****OP FETCH  RD MREQ M1 Address bus = 0x8 R  DataBus = 0x76
+****OP FETCH  RD MREQ HALT 
+Memory contents
+address = 0x0 0x6
+address = 0x1 0x11
+address = 0x2 0x3E
+address = 0x3 0x22
+address = 0x4 0x80
+address = 0x5 0x32
+address = 0x6 0xC
+address = 0x7 0x0
+address = 0x8 0x76
+address = 0x9 0x0
+address = 0xA 0x0
+address = 0xB 0x0
+address = 0xC 0x33
+address = 0xD 0x0
+address = 0xE 0x0
+address = 0xF 0x0
+address = 0x10  0x0
+address = 0x11  0x0
+address = 0x12  0x0
+address = 0x13  0x0
+address = 0x14  0x0
+address = 0x15  0x0
+address = 0x16  0x0
+address = 0x17  0x0
+address = 0x18  0x0
+address = 0x19  0x0
+address = 0x1A  0x0
+address = 0x1B  0x0
+address = 0x1C  0x0
+address = 0x1D  0x0
+address = 0x1E  0x0
+address = 0x1F  0x0
 
 
 */
@@ -111,7 +164,7 @@ void resetCPU()
   Serial.println();
   Serial.println("CPU is in reset, RESET held active");
   digitalWrite(RESET, LOW);      
-  for (int i = 0; i < 6; i++)
+  for (int i = 0; i < 8; i++)
   {
     waitExternalClock();
   }
@@ -253,16 +306,14 @@ void initialiseProgram()
   // s simple machine code program adds two 8 bit numbers
   
   Z80_RAM[0] = 0x06;  // ld b, n  (take conents of next memory address as operand)
-  Z80_RAM[1] = 0x50;  
+  Z80_RAM[1] = 0x11;  
   Z80_RAM[2] = 0x3e;  // ld a, n  (take conents of next memory address as operand)
-  Z80_RAM[3] = 0x51;  
+  Z80_RAM[3] = 0x22;  
   Z80_RAM[4] = 0x80;  // add, a,b  stores result in a
   Z80_RAM[5] = 0x32;  // ld (nn), a  (takes next two memory locations as 
   Z80_RAM[6] = 0x0c;  // 
   Z80_RAM[7] = 0x00;  // 
   Z80_RAM[8] = 0x76;
-  Z80_RAM[0x50] = 0;
-  Z80_RAM[0x50] = 0;
   
 /*   simple nop and halt code to test databus
   Z80_RAM[0] = 0x00;
@@ -285,15 +336,15 @@ void waitExternalClock()
     bool currentClock = digitalRead(CLK);
     if ((currentClock == false) && (lastClock == true))
     {
-      Serial.print(clockTransitionLowHigh++);
-      Serial.print("\t\t");
+      //Serial.print(clockTransitionLowHigh++);
+      //Serial.print("\t\t");
      
       readStatus();
-      printStatus(); 
-      Serial.print("\t");
-      readAddressBus();
-      Serial.print("\t");
-      printAddressAndDataBus();
+      //printStatus(); 
+      //Serial.print("\t");
+      //readAddressBus();
+      //Serial.print("\t");
+      //printAddressAndDataBus();
       clockTransitioned = true;
     }
    // if ((currentClock == false) && (lastClock == true)) break;
@@ -310,10 +361,8 @@ void loop()
     digitalWrite(NMI,HIGH);
     digitalWrite(INT,HIGH); 
     
-    setDataToOutput();
     MachineOne = false;
-  
-  
+ 
     waitExternalClock();
     
     if (refreshSet == true)
@@ -331,7 +380,8 @@ void loop()
         dataBus = Z80_RAM[addressBus];
         if (addressBus > SIZE_OF_RAM)
         {
-          Serial.print("got address outside RAM");
+          Serial.print("got address outside RAM::");
+          printAddressAndDataBus();
           delay(250);
           exit(0);
         }    
@@ -342,7 +392,6 @@ void loop()
       {
           Serial.print("****READ\t");
           printStatus();
-          setDataToOutput();  
           readAddressBus();
            
           if (addressBus > SIZE_OF_RAM)
