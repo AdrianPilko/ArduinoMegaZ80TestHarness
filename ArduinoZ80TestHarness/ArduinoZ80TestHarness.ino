@@ -24,14 +24,17 @@ Ardiuno Mega test harness for Z80A CPU
 Not all cycles are implemented, can write a program and put in the Z80_RAM[]
 in function "initialiseProgram()"
 
-currently only have nops followed by HALT, all the machine cycles will be implemented eventually
-1) instruction op code fetch
-2) memory read or write
-3) Input or output cycles
-4) Interrupt request / ack
-5) bus request / ack
+All the machine cycles will be implemented eventually
+1) instruction op code fetch - DONE
+2) memory read or write - DONE
+3) Input or output cycles - TODO
+4) Interrupt request / ack - TODO
+5) bus request / ack - TODO
 
-this is the output for that extremely simple program:
+This is the output for that simple program; the machine code reads 
+in 2 values from memory into a and b, then adds them and stores the
+result in 0x0c:
+
 
 CPU is in reset, RESET held active
 
