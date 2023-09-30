@@ -306,7 +306,7 @@ int M_cycle = 1; // M state cycles through (as far as I can tell M1 opcode fetch
 
 void initialiseProgram()
 {
-/*
+
   // s simple machine code program adds two 8 bit numbers and store in 3 locations
   
   Z80_RAM[0] = 0x06;  // ld b, n  (take conents of next memory address as operand)
@@ -324,8 +324,8 @@ void initialiseProgram()
   Z80_RAM[12] = 0x1e;  // 
   Z80_RAM[13] = 0x00;  // 
   Z80_RAM[14] = 0x76;
-*/  
-
+ 
+/*
 // s simple machine code program loops 255  incrementing "a" and 
 // using djnz (auto decrement b and test zero  
   Z80_RAM[0] = 0x06;  // ld b, n  (take conents of next memory address as operand)
@@ -341,7 +341,7 @@ void initialiseProgram()
   Z80_RAM[10] = 0x1e;  // 
   Z80_RAM[11] = 0x00;  // 
   Z80_RAM[12] = 0x76;
-  
+  */
 /*   simple nop and halt code to test databus
   Z80_RAM[0] = 0x00;
   Z80_RAM[1] = 0x00;
@@ -365,7 +365,6 @@ void waitExternalClock()
     {
       //Serial.print(clockTransitionLowHigh++);
       //Serial.print("\t\t");
-     
       readStatus();
       //printStatus(); 
       //Serial.print("\t");
@@ -391,6 +390,7 @@ void loop()
     MachineOne = false;
  
     waitExternalClock();
+    //readStatus();
     
     if (refreshSet == true)
     {
