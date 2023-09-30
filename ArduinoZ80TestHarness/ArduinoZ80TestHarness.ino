@@ -416,7 +416,7 @@ void checkProgramResultAndRestart()
   Serial.print("\t\tProgram ERROR count=");
   Serial.println(errorResultCount);
   Serial.println();
-  delay(2000);
+  delay(5000);
   
   programMode++;
   if (programMode > NUMBER_OF_TEST_PROGRAMS)
