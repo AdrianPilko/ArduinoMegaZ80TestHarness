@@ -99,13 +99,13 @@ address = 0x1F  0x0
 
 // give it 1K of RAM, should be enough for program and some data
 #define SIZE_OF_RAM 1024
+#define NUMBER_OF_TEST_PROGRAMS 3
 uint8_t Z80_RAM[SIZE_OF_RAM];
 uint16_t addressBus = 0;
 uint8_t dataBus;
 int errorResultCount = 0;
 int programCorrectCount = 0;
-int programMode = 0;
-
+int programMode = 1;
 
 #define NUMBER_OF_ADDRESS_PINS 16
 #define NUMBER_OF_DATA_PINS 8
@@ -167,15 +167,9 @@ void  setDataToInput()
 void resetCPU()
 {
     // clock provided externally by 555 timer
-  Serial.println();
-  Serial.print("Program correct count=");
-  Serial.print(programCorrectCount);
-  Serial.print("\t\tProgram ERROR count=");
-  Serial.println(errorResultCount);
-  Serial.println();
   Serial.println("CPU is in reset, RESET held active");
   digitalWrite(RESET, LOW);      
-  for (int i = 0; i < 8; i++)
+  for (int i = 0; i < 12; i++)
   {
     waitExternalClock();
   }
@@ -183,9 +177,8 @@ void resetCPU()
   Serial.println("CPU now reset");
 }
 
-void setup() {
-  // initialize serial communication at 9600 bits per second:
-  Serial.begin(115200);
+void initialiseTest()
+{
   pinMode(RESET, OUTPUT);   // remember that the INPUT / OUTPUT is from the point of view of the Arduino  
   pinMode(CLK, INPUT);   // to grab 555 timer clock output
 
@@ -215,6 +208,11 @@ void setup() {
   // to reset z80 the reset must be held active (low) for a minimum of 3 clock cycles
   // then set to high after
   resetCPU();
+}
+void setup() {
+  // initialize serial communication at 9600 bits per second:
+  Serial.begin(115200);
+  initialiseTest();
 }
 
 void outputToDataPins(uint8_t val)
@@ -264,23 +262,7 @@ void printStatus()
   {
     Serial.print("HALT ");
     printFirst32MemeoryLocations();
-
-
-    // do a reset after checking the address 1c 1d and 1e in program mode 1
-    if (programMode == 1)
-    {
-      if (Z80_RAM[0x1c] != 0x33) errorResultCount++;
-      else
-         programCorrectCount++;
-      if (Z80_RAM[0x1d] != 0x33) errorResultCount++;
-      else
-         programCorrectCount++;      
-      if (Z80_RAM[0x1e] != 0x33) errorResultCount++;
-      else
-         programCorrectCount++;      
-    }    
-    resetCPU();
-    //exit(0); // seems fair to exit the test harness at this point!
+    checkProgramResultAndRestart();    
   }
   if (MachineOne== true) Serial.print("M1 ");
   if (refreshSet== true) Serial.print("REFRESH ");
@@ -329,50 +311,56 @@ int M_cycle = 1; // M state cycles through (as far as I can tell M1 opcode fetch
 
 void initialiseProgram()
 {
-
-  // s simple machine code program adds two 8 bit numbers and store in 3 locations
-  programMode = 1;
-  Z80_RAM[0] = 0x06;  // ld b, n  (take conents of next memory address as operand)
-  Z80_RAM[1] = 0x11;  
-  Z80_RAM[2] = 0x3e;  // ld a, n  (take conents of next memory address as operand)
-  Z80_RAM[3] = 0x22;  
-  Z80_RAM[4] = 0x80;  // add, a,b  stores result in a
-  Z80_RAM[5] = 0x32;  // ld (nn), a  (takes next two memory locations as 
-  Z80_RAM[6] = 0x1c;  // 
-  Z80_RAM[7] = 0x00;  // 
-  Z80_RAM[8] = 0x32;  // ld (nn), a  (takes next two memory locations as 
-  Z80_RAM[9] = 0x1d;  // 
-  Z80_RAM[10] = 0x00;  // 
-  Z80_RAM[11] = 0x32;  // ld (nn), a  (takes next two memory locations as 
-  Z80_RAM[12] = 0x1e;  // 
-  Z80_RAM[13] = 0x00;  // 
-  Z80_RAM[14] = 0x76;
- 
-/*
-// s simple machine code program loops 255  incrementing "a" and 
-// using djnz (auto decrement b and test zero  
-  Z80_RAM[0] = 0x06;  // ld b, n  (take conents of next memory address as operand)
-  Z80_RAM[1] = 0x05;  
-  Z80_RAM[2] = 0xaf;  // xor a , this zeros a
-  Z80_RAM[3] = 0x3c;  // inc c
-  Z80_RAM[4] = 0x10;  // djnz 
-  Z80_RAM[5] = 0xfd;  // relative jump location (twos compliment = -2)
-  Z80_RAM[6] = 0x32;  // ld (nn), a  (takes next two memory locations as 
-  Z80_RAM[7] = 0x1d;  // 
-  Z80_RAM[8] = 0x00;  // 
-  Z80_RAM[9] = 0x32;  // ld (nn), a  (takes next two memory locations as 
-  Z80_RAM[10] = 0x1e;  // 
-  Z80_RAM[11] = 0x00;  // 
-  Z80_RAM[12] = 0x76;
-  */
-/*   simple nop and halt code to test databus
-  Z80_RAM[0] = 0x00;
-  Z80_RAM[1] = 0x00;
-  Z80_RAM[2] = 0x00;
-  Z80_RAM[3] = 0x00;
-  Z80_RAM[4] = 0x76;
-*/
-  
+  // simple machine code program adds two 8 bit numbers and store in 3 locations
+  if (programMode == 1)
+  {
+    Z80_RAM[0] = 0x06;  // ld b, n  (take conents of next memory address as operand)
+    Z80_RAM[1] = 0x11;  
+    Z80_RAM[2] = 0x3e;  // ld a, n  (take conents of next memory address as operand)
+    Z80_RAM[3] = 0x22;  
+    Z80_RAM[4] = 0x80;  // add, a,b  stores result in a
+    Z80_RAM[5] = 0x32;  // ld (nn), a  (takes next two memory locations as 
+    Z80_RAM[6] = 0x1c;  // 
+    Z80_RAM[7] = 0x00;  // 
+    Z80_RAM[8] = 0x32;  // ld (nn), a  (takes next two memory locations as 
+    Z80_RAM[9] = 0x1d;  // 
+    Z80_RAM[10] = 0x00;  // 
+    Z80_RAM[11] = 0x32;  // ld (nn), a  (takes next two memory locations as 
+    Z80_RAM[12] = 0x1e;  // 
+    Z80_RAM[13] = 0x00;  // 
+    Z80_RAM[14] = 0x76;
+  }
+  else if (programMode == 2)
+  {
+  // s simple machine code program loops 0x1f  incrementing "a" and 
+  // using djnz (auto decrement b and test zero  
+    Z80_RAM[0] = 0xaf;  // xor a , this zeros a
+    Z80_RAM[1] = 0x06;  // ld b, n  (take conents of next memory address as operand)
+    Z80_RAM[2] = 0x1f;  // 255 loop counter in b   
+    Z80_RAM[3] = 0x3c;  // inc a
+    Z80_RAM[4] = 0x10;  // djnz 
+    Z80_RAM[5] = 0xfd;  // relative jump location (twos compliment = -2)
+    Z80_RAM[6] = 0x32;  // ld (nn), a  (takes next two memory locations as 
+    Z80_RAM[7] = 0x1d;  // 
+    Z80_RAM[8] = 0x00;  // 
+    Z80_RAM[9] = 0x32;  // ld (nn), a  (takes next two memory locations as 
+    Z80_RAM[10] = 0x1e;  // 
+    Z80_RAM[11] = 0x00;  // 
+    Z80_RAM[12] = 0x76;
+  }
+  else if (programMode == 3)
+  {
+    // nop and halt code to test databus
+    Z80_RAM[0] = 0x00;
+    Z80_RAM[1] = 0x00;
+    Z80_RAM[2] = 0x00;
+    Z80_RAM[3] = 0x00;
+    Z80_RAM[4] = 0x00;
+    Z80_RAM[5] = 0x00;
+    Z80_RAM[6] = 0x00;
+    Z80_RAM[7] = 0x00;
+    Z80_RAM[8] = 0x76;
+  } 
 }
 
 int clockTransitionLowHigh = 0;
@@ -395,6 +383,49 @@ void waitExternalClock()
     }  
     lastClock = currentClock;
   }  
+}
+
+void checkProgramResultAndRestart()
+{
+  printAddressAndDataBus();
+  // do a reset after checking the address 1c 1d and 1e in program mode 1
+  if (programMode == 1)
+  {
+    if (Z80_RAM[0x1c] != 0x33) errorResultCount++;
+    else
+       programCorrectCount++;
+    if (Z80_RAM[0x1d] != 0x33) errorResultCount++;
+    else
+       programCorrectCount++;      
+    if (Z80_RAM[0x1e] != 0x33) errorResultCount++;
+    else
+       programCorrectCount++;      
+  }   
+  if (programMode == 2)
+  {
+    if (Z80_RAM[0x1d] != 0x1f) errorResultCount++;
+    else
+       programCorrectCount++;      
+    if (Z80_RAM[0x1e] != 0x1f) errorResultCount++;
+    else
+       programCorrectCount++;      
+  }                 
+  Serial.println();
+  Serial.print("Program correct count=");
+  Serial.print(programCorrectCount);
+  Serial.print("\t\tProgram ERROR count=");
+  Serial.println(errorResultCount);
+  Serial.println();
+  delay(2000);
+  
+  programMode++;
+  if (programMode > NUMBER_OF_TEST_PROGRAMS)
+  {
+    programMode = 1;
+  }
+  initialiseProgram();
+  
+  initialiseTest();
 }
 
 void loop() 
@@ -426,25 +457,13 @@ void loop()
         if (addressBus > SIZE_OF_RAM)
         {
           Serial.print("got address outside RAM::");
+          checkProgramResultAndRestart();
+        }   
+        else
+        { 
+          outputToDataPins(dataBus);
           printAddressAndDataBus();
-          // do a reset after checking the address 1c 1d and 1e in program mode 1
-          if (programMode == 1)
-          {
-            if (Z80_RAM[0x1c] != 0x33) errorResultCount++;
-            else
-               programCorrectCount++;
-            if (Z80_RAM[0x1d] != 0x33) errorResultCount++;
-            else
-               programCorrectCount++;      
-            if (Z80_RAM[0x1e] != 0x33) errorResultCount++;
-            else
-               programCorrectCount++;      
-          }   
-          delay(2000);
-          resetCPU();
-        }    
-        outputToDataPins(dataBus);
-        printAddressAndDataBus();
+        }
       }     
       else if ((readEn) && (memRequest))
       {
@@ -453,28 +472,16 @@ void loop()
           readAddressBus();
            
           if (addressBus > SIZE_OF_RAM)
-          {
-            Serial.print("got address outside RAM::");
-            printAddressAndDataBus();
-            // do a reset after checking the address 1c 1d and 1e in program mode 1
-            if (programMode == 1)
-            {
-              if (Z80_RAM[0x1c] != 0x33) errorResultCount++;
-              else
-                 programCorrectCount++;
-              if (Z80_RAM[0x1d] != 0x33) errorResultCount++;
-              else
-                 programCorrectCount++;      
-              if (Z80_RAM[0x1e] != 0x33) errorResultCount++;
-              else
-                 programCorrectCount++;      
-            }   
-            delay(2000);
-            resetCPU();
+          {            
+            Serial.println("got address outside RAM::");
+            checkProgramResultAndRestart();
           }
-          dataBus = Z80_RAM[addressBus];        
-          outputToDataPins(dataBus);
-          printAddressAndDataBus();
+          else
+          {
+            dataBus = Z80_RAM[addressBus];        
+            outputToDataPins(dataBus);
+            printAddressAndDataBus();
+          }
       }
       else if ((writeEn) && (memRequest))
       {
