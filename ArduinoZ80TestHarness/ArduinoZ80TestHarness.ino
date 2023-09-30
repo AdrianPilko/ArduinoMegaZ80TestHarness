@@ -279,8 +279,7 @@ void printStatus()
       else
          programCorrectCount++;      
     }    
-    delay(1000);
-    setup();
+    resetCPU();
     //exit(0); // seems fair to exit the test harness at this point!
   }
   if (MachineOne== true) Serial.print("M1 ");
@@ -391,8 +390,8 @@ void waitExternalClock()
     
     if ((currentClock == false) && (lastClock == true))
     {      
-      readStatus();
       clockTransitioned = true;
+      readStatus();
     }  
     lastClock = currentClock;
   }  
@@ -409,7 +408,7 @@ void loop()
     
     MachineOne = false;
  
-    waitExternalClock();    
+    waitExternalClock();        
     
     if (refreshSet == true)
     {
@@ -441,8 +440,8 @@ void loop()
             else
                programCorrectCount++;      
           }   
-          delay(1000);
-          setup();
+          delay(2000);
+          resetCPU();
         }    
         outputToDataPins(dataBus);
         printAddressAndDataBus();
@@ -470,8 +469,8 @@ void loop()
               else
                  programCorrectCount++;      
             }   
-            delay(1000);
-            setup();
+            delay(2000);
+            resetCPU();
           }
           dataBus = Z80_RAM[addressBus];        
           outputToDataPins(dataBus);
