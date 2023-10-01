@@ -338,15 +338,18 @@ void initialiseProgram()
     Z80_RAM[1] = 0x06;  // ld b, n  (take conents of next memory address as operand)
     Z80_RAM[2] = 0x0f;  // loop counter in b   
     Z80_RAM[3] = 0x3c;  // inc a
-    Z80_RAM[4] = 0x10;  // djnz 
-    Z80_RAM[5] = 0xfd;  // relative jump location (twos compliment = -2)
-    Z80_RAM[6] = 0x32;  // ld (nn), a  (takes next two memory locations as 
-    Z80_RAM[7] = 0x1d;  // 
-    Z80_RAM[8] = 0x00;  // 
-    Z80_RAM[9] = 0x32;  // ld (nn), a  (takes next two memory locations as 
-    Z80_RAM[10] = 0x1e;  // 
+    Z80_RAM[4] = 0x32;  // ld (nn), a  (takes next two memory locations as operand)
+    Z80_RAM[5] = 0x1d;  // just write registger a to 0x1d in the loop so we can see it in the serial
+    Z80_RAM[6] = 0x00;  //   
+    Z80_RAM[7] = 0x10;  // djnz 
+    Z80_RAM[8] = 0xfa;  // relative jump location (twos compliment = -5 == 250 = 0xfa)
+    Z80_RAM[9] = 0x32;  // ld (nn), a  (takes next two memory locations as operand)
+    Z80_RAM[10] = 0x1d;  // 
     Z80_RAM[11] = 0x00;  // 
-    Z80_RAM[12] = 0x76;
+    Z80_RAM[12] = 0x32;  // ld (nn), a  (takes next two memory locations as operand)
+    Z80_RAM[13] = 0x1e;  // 
+    Z80_RAM[14] = 0x00;  // 
+    Z80_RAM[15] = 0x76;
   }
   else if (programMode == 3)
   {
