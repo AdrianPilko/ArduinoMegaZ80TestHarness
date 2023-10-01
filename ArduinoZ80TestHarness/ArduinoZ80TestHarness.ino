@@ -332,11 +332,11 @@ void initialiseProgram()
   }
   else if (programMode == 2)
   {
-  // s simple machine code program loops 0x1f  incrementing "a" and 
+  // s simple machine code program loops 0x0f  incrementing "a" and 
   // using djnz (auto decrement b and test zero  
     Z80_RAM[0] = 0xaf;  // xor a , this zeros a
     Z80_RAM[1] = 0x06;  // ld b, n  (take conents of next memory address as operand)
-    Z80_RAM[2] = 0x1f;  // 255 loop counter in b   
+    Z80_RAM[2] = 0x0f;  // loop counter in b   
     Z80_RAM[3] = 0x3c;  // inc a
     Z80_RAM[4] = 0x10;  // djnz 
     Z80_RAM[5] = 0xfd;  // relative jump location (twos compliment = -2)
@@ -378,11 +378,11 @@ void waitExternalClock()
     
     if ((currentClock == false) && (lastClock == true))
     {      
-      clockTransitioned = true;
-      readStatus();
-    }  
+      clockTransitioned = true;            
+    }      
     lastClock = currentClock;
   }  
+  readStatus();
 }
 
 void checkProgramResultAndRestart()
@@ -403,13 +403,22 @@ void checkProgramResultAndRestart()
   }   
   if (programMode == 2)
   {
-    if (Z80_RAM[0x1d] != 0x1f) errorResultCount++;
+    if (Z80_RAM[0x1d] != 0xf) errorResultCount++;
     else
        programCorrectCount++;      
-    if (Z80_RAM[0x1e] != 0x1f) errorResultCount++;
+    if (Z80_RAM[0x1e] != 0xf) errorResultCount++;
     else
        programCorrectCount++;      
-  }                 
+  }
+  if (programMode == 3)             
+  {
+    // all we're looking sfor on program 3 is the last instruction on dataBus == 0x76 == halt, and address == 8
+    if ((addressBus == 8) &&(dataBus == 0x76))
+    {
+       programCorrectCount++;     
+    }
+    else errorResultCount++;
+  }
   Serial.println();
   Serial.print("Program correct count=");
   Serial.print(programCorrectCount);
@@ -449,7 +458,8 @@ void loop()
     {
       if ((MachineOne) && (memRequest) && (readEn))
       {   
-        Serial.print("****OP FETCH\t");
+        Serial.print(programMode);
+        Serial.print(" ****OP FETCH\t");
         printStatus(); 
         setDataToOutput();  
         readAddressBus();
@@ -467,7 +477,8 @@ void loop()
       }     
       else if ((readEn) && (memRequest))
       {
-          Serial.print("****READ\t");
+          Serial.print(programMode);
+          Serial.print(" ****READ\t");
           printStatus();
           readAddressBus();
            
@@ -485,7 +496,8 @@ void loop()
       }
       else if ((writeEn) && (memRequest))
       {
-        Serial.print("****WRITE\t");
+        Serial.print(programMode);
+        Serial.print(" ****WRITE\t");
         printStatus();
         setDataToInput();
         readAddressBus();
