@@ -34,7 +34,7 @@ int programMode = 1;
 #define NUMBER_OF_ADDRESS_PINS 16
 #define NUMBER_OF_DATA_PINS 8
 int addressPins[NUMBER_OF_ADDRESS_PINS] = {52,50,48,46,44,42,40,38,36,34,32,30,28,26,24,22};
-int dataPins[NUMBER_OF_DATA_PINS] = {15,14,17,20,21,19,18,16};
+int dataPins[NUMBER_OF_DATA_PINS] = {21,20,19,18,17,16,15,14};
 
 int CLK = 12; 
 int HALT = 4; // pin 18 on Z80 // output from z80
@@ -171,13 +171,14 @@ void readAddressBus()
 
 void printAddressAndDataBus()
 {
+  Serial.println();
   Serial.print("Address bus = 0x");
   Serial.print(addressBus,HEX); 
   if(writeEn)  
-    Serial.print(" W "); 
+    Serial.print("\t\tW "); 
   else
-    Serial.print(" R "); 
-  Serial.print(" DataBus = 0x");
+    Serial.print("\t\tR "); 
+  Serial.print("DataBus = 0x");
   Serial.print(dataBus,HEX); 
   Serial.println();
 }
@@ -198,10 +199,8 @@ void waitExternalClock()
     
     if ((currentClock == false) && (lastClock == true))
     { 
-      readStatus();
+      
       clockTransitioned = true;            
-      Serial.print("CLOCK ");
-      Serial.println(clockCount++);        
     }      
     lastClock = currentClock;
   }  
@@ -212,6 +211,7 @@ void loop()
   while(1)
   {    
     waitExternalClock();  
+    readStatus();
     printStatus();          
     readAddressBus();    
     dataBus = readFromDataPins();
