@@ -27,8 +27,8 @@ All clock, and control pins must be generated/handled externally
 it's possible assemble small programs using https://www.asm80.com/onepage/asmz80.html and
 add them to the "simulated ROM"
 */
-const int programMode = 3;
-const int SIZE_OF_RAM = 512;
+const int programMode = 1;
+const int SIZE_OF_RAM = 32;
 //uint16_t addressBus = 0;
 uint8_t addressBus = 0;
 uint8_t dataBus = 0;
@@ -45,8 +45,9 @@ int CLK = 4;
 int RESET = 5; // PIN 26 on Z80  // INPUT to Z80
 int MREQ = 6; // pin 19 on Z80 // output from z80
 int REFRESH = 7;
-int IORQ = 8;
-int HALT = 9;
+int HALT = 8;
+int IORQ = 9;
+
 
 bool writeEn = false;
 bool readEn = false;
@@ -60,7 +61,7 @@ bool resetSet = true;
 
 unsigned char Z80_RAM[SIZE_OF_RAM]; // 512 bytes of RAM should be plenty here :)
 
-const int HALF_CLOCK_RATE = 100;
+const int HALF_CLOCK_RATE = 200;
 
 void setAddressPinsToInput()
 {
@@ -111,8 +112,8 @@ void initialiseTest()
   pinMode(MREQ, INPUT); 
   pinMode(REFRESH, INPUT); 
   pinMode(IORQ, INPUT); 
-  pinMode(HALT, INPUT); 
-  
+  pinMode(HALT, INPUT);   
+  initialiseProgram();
   setAddressPinsToInput();
   setDataToInput();
   resetCPU();
@@ -155,9 +156,7 @@ void printStatus()
   if (ioRequest == true) Serial.print("IORQ ");
   if (haltSet == true) 
   {
-      Serial.println("!!!!!!!!!!!!!!!!!!");
-      Serial.println("PROCESSOR HALT!!!!");
-      Serial.println("!!!!!!!!!!!!!!!!!!");
+      Serial.println("PROCESSOR HALT");
   }
 }
 
@@ -306,15 +305,13 @@ void printMemory()
       Serial.print(":");
     }
   }
+  Serial.println();
 }
 
 void loop() 
 {  
-  initialiseProgram();
-  setDataToOutput();
-  
-  while(1)
-  {    
+  //while(1)
+  //{    
     delay(HALF_CLOCK_RATE);
     toggleClock();
     delay(HALF_CLOCK_RATE);
@@ -324,7 +321,7 @@ void loop()
     if (haltSet == true)
     {
        printMemory();
-       exit(EXIT_SUCCESS);
+       delay(1000);
     }
     readAddressBus();               
     // the z80 will assert the RD and MREQ when reading from RAM, bvut we also have to check that REFRSH is not active
@@ -340,7 +337,7 @@ void loop()
       else
       {
         Serial.println("SEG FAULT attempt to read off end of memory");
-        exit(EXIT_FAILURE);
+        delay(100);
       }
       printAddressAndDataBus(); 
       outputToDataPins(dataBus);
@@ -357,9 +354,9 @@ void loop()
       else
       {
         Serial.println("SEG FAULT attempt to read off end of memory");
-        exit(EXIT_FAILURE);
+        delay(100);
       }      
       printAddressAndDataBus();
     }    
-  }
+//  }
 }
