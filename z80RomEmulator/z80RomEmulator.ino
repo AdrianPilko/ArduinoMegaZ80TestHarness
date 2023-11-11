@@ -27,6 +27,10 @@ All clock, and control pins must be generated/handled externally
 it's possible assemble small programs using https://www.asm80.com/onepage/asmz80.html and
 add them to the "simulated ROM"
 */
+
+#include <avr/sleep.h>
+
+
 const int programMode = 2;
 const int SIZE_OF_RAM = 512;
 //uint16_t addressBus = 0;
@@ -65,7 +69,7 @@ bool resetSet = true;
 
 unsigned char Z80_RAM[SIZE_OF_RAM]; // 512 bytes of RAM should be plenty here :)
 
-const int HALF_CLOCK_RATE = 20;
+const int HALF_CLOCK_RATE = 2;
 
 void setAddressPinsToInput()
 {
@@ -125,6 +129,7 @@ void initialiseTest()
 void setup() {
   // initialize serial communication at 9600 bits per second:
   Serial.begin(115200);
+  set_sleep_mode(SLEEP_MODE_STANDBY);
   initialiseTest();
 }
 
@@ -341,25 +346,14 @@ void loop()
     {
        printStatus();
        printMemory();
-       while(1) delay (TEN_SECONDS);
+       Serial.flush();
+       sleep_mode();
     }
     readAddressBus();               
     // the z80 will assert the RD and MREQ when reading from RAM, bvut we also have to check that REFRSH is not active
     // the logic here is active high (reverse when read from pins), the z80 in reality uses active low for cpu control pins
     if ((readEn) && (memRequest) && (!refreshSet))
     {
-
-      /// debug mode for programMode 4
-      //if (programMode == 4)
-      //{
-      //  if (addressBus == 5)  
-      //  {
-      //    printAddressAndDataBus(); 
-      //    printMemory();
-      //    while(1) delay (TEN_SECONDS);
-      //  }
-     // }
-
       if (addressBus < SIZE_OF_RAM)
       {
         dataBus = Z80_RAM[addressBus];
@@ -367,8 +361,7 @@ void loop()
       else
       {
         Serial.println("SEG FAULT attempt to read off end of memory");
-        printMemory();
-        while(1) delay (TEN_SECONDS);
+        sleep_mode();
       }
       printStatus();
       printAddressAndDataBus(); 
@@ -386,8 +379,7 @@ void loop()
       else
       {
         Serial.println("SEG FAULT attempt to read off end of memory");
-        printMemory();
-        while(1) delay (TEN_SECONDS);
+        sleep_mode();
       }      
       printAddressAndDataBus();
     }    
