@@ -27,16 +27,20 @@ All clock, and control pins must be generated/handled externally
 it's possible assemble small programs using https://www.asm80.com/onepage/asmz80.html and
 add them to the "simulated ROM"
 */
-const int programMode = 1;
-const int SIZE_OF_RAM = 32;
+const int programMode = 4;
+const int SIZE_OF_RAM = 512;
 //uint16_t addressBus = 0;
 uint8_t addressBus = 0;
 uint8_t dataBus = 0;
 
+const int TEN_SECONDS = 10000;
 #define NUMBER_OF_ADDRESS_PINS 9
 #define NUMBER_OF_DATA_PINS 8
 int addressPins[NUMBER_OF_ADDRESS_PINS] = {36,38,40,42,44,46,48,50,52};
-int dataPins[NUMBER_OF_DATA_PINS] = {23,25,27,29,31,33,35,37};
+// pins on arduino are in sequence but z80 are not so have make sure Z80 is connected properly
+int dataPins[NUMBER_OF_DATA_PINS] = {37,35,33,31,29,27,25,23};
+
+
 
 /// these are the pins to connect the control lines to the Z80
 int RD = 2; // active low 
@@ -61,7 +65,7 @@ bool resetSet = true;
 
 unsigned char Z80_RAM[SIZE_OF_RAM]; // 512 bytes of RAM should be plenty here :)
 
-const int HALF_CLOCK_RATE = 200;
+const int HALF_CLOCK_RATE = 20;
 
 void setAddressPinsToInput()
 {
@@ -191,9 +195,9 @@ void resetCPU()
   for (int i = 0; i < 10; i++)
   {
     toggleClock();
-    delay(HALF_CLOCK_RATE);
+    delay(20);
     toggleClock();
-    delay(HALF_CLOCK_RATE);
+    delay(20);
     Serial.println("Reset");
   }   
   digitalWrite(RESET, HIGH);
@@ -204,12 +208,17 @@ void printAddressAndDataBus()
   Serial.println();
   Serial.print("Address bus = 0x");
   Serial.print(addressBus,HEX); 
+  Serial.print(" ");
+  Serial.print(addressBus,BIN); 
   if(writeEn)  
     Serial.print("\t\tW "); 
   else
     Serial.print("\t\tR "); 
   Serial.print("DataBus = 0x");
   Serial.print(dataBus,HEX); 
+  Serial.print(" ");
+  Serial.print(dataBus,BIN); 
+  
   Serial.println();
 }
 
@@ -261,30 +270,42 @@ void initialiseProgram()
   {
   // s simple machine code program loops 0x0f  incrementing "a" and 
   // using djnz (auto decrement b and test zero  
-    Z80_RAM[0] = 0xaf;  // xor a , this zeros a
-    Z80_RAM[1] = 0x06;  // ld b, n  (take conents of next memory address as operand)
-    Z80_RAM[2] = 0x0f;  // loop counter in b   
-    Z80_RAM[3] = 0x3c;  // inc a
-    Z80_RAM[4] = 0x32;  // ld (nn), a  (takes next two memory locations as operand)
-    Z80_RAM[5] = 0x1d;  // just write registger a to 0x1d in the loop so we can see it in the serial
-    Z80_RAM[6] = 0x00;  //   
-    Z80_RAM[7] = 0x10;  // djnz 
-    Z80_RAM[8] = 0xfa;  // relative jump location (twos compliment = -5 == 250 = 0xfa)
-    Z80_RAM[9] = 0x32;  // ld (nn), a  (takes next two memory locations as operand)
-    Z80_RAM[10] = 0x1d;  // 
-    Z80_RAM[11] = 0x00;  // 
-    Z80_RAM[12] = 0x32;  // ld (nn), a  (takes next two memory locations as operand)
-    Z80_RAM[13] = 0x1e;  // 
-    Z80_RAM[14] = 0x00;  // 
-    Z80_RAM[15] = 0x76;
+    //Z80_RAM[0] = 0xaf;  // xor a , this zeros a
+    Z80_RAM[0] = 0x3e;  // ld a, 0x0f
+    Z80_RAM[1] = 0x0f;  // 
+    Z80_RAM[2] = 0x06;  // ld b, n  (take conents of next memory address as operand)
+    Z80_RAM[3] = 0x0f;  // loop counter in b   
+    //Z80_RAM[4] = 0x3c;  // inc a
+    Z80_RAM[4] = 0x0;  // nop
+    Z80_RAM[5] = 0x32;  // ld (nn), a  (takes next two memory locations as operand)
+    Z80_RAM[6] = 0b1111;  // just write registger a to 0x18 in the loop so we can see it in the serial
+    Z80_RAM[7] = 0x0000;  //   0010
+    Z80_RAM[8] = 0x10;  // djnz 
+    Z80_RAM[9] = 0xfa;  // relative jump location (twos compliment = -5 == 250 = 0xfa)
+    Z80_RAM[10] = 0x32;  // ld (nn), a  (takes next two memory locations as operand)
+    Z80_RAM[11] = 0x1d;  // 
+    Z80_RAM[12] = 0x00;  // 
+    Z80_RAM[13] = 0x32;  // ld (nn), a  (takes next two memory locations as operand)
+    Z80_RAM[14] = 0x1e;  // 
+    Z80_RAM[15] = 0x00;  // 
+    Z80_RAM[16] = 0x76;
   }
   else if (programMode == 3)
   {
     // nop and halt code to test databus
-    Z80_RAM[0] = 0x00;
-    Z80_RAM[1] = 0x00;
-    Z80_RAM[2] = 0x76;
+    Z80_RAM[0] = 0x00;  // nop
+    Z80_RAM[1] = 0x00;   // nop
+    Z80_RAM[2] = 0x76;   // halt
   } 
+  else if (programMode == 4)
+  {
+    Z80_RAM[0] = 0x3e;  // ld a, 0x0f
+    Z80_RAM[1] = 0b01010101;  // 
+    Z80_RAM[2] = 0x32;  // ld (nn), a  (takes next two memory locations as operand)
+    Z80_RAM[3] = 0x18; 
+    Z80_RAM[4] = 0b00000000;
+    Z80_RAM[5] = 0x76;  //   halt
+  }   
 }
 
 void printMemory()
@@ -298,6 +319,8 @@ void printMemory()
       Serial.print("address = 0x");
       Serial.print(i, HEX);    
       Serial.print(":");
+      Serial.print(Z80_RAM[i], HEX);
+      Serial.print(":");
     }    
     else
     {      
@@ -310,25 +333,35 @@ void printMemory()
 
 void loop() 
 {  
-  //while(1)
-  //{    
     delay(HALF_CLOCK_RATE);
     toggleClock();
     delay(HALF_CLOCK_RATE);
     toggleClock();
     readStatus();
+    //printStatus();
     // this is halt instruction so stop and print memory
     if (haltSet == true)
     {
+       printStatus();
        printMemory();
-       delay(1000);
+       while(1) delay (TEN_SECONDS);
     }
     readAddressBus();               
     // the z80 will assert the RD and MREQ when reading from RAM, bvut we also have to check that REFRSH is not active
     // the logic here is active high (reverse when read from pins), the z80 in reality uses active low for cpu control pins
     if ((readEn) && (memRequest) && (!refreshSet))
     {
-      printStatus();     
+
+      /// debug mode for programMode 4
+      if (programMode == 4)
+      {
+        if (addressBus == 5)  
+        {
+          printAddressAndDataBus(); 
+          printMemory();
+          while(1) delay (TEN_SECONDS);
+        }
+      }
 
       if (addressBus < SIZE_OF_RAM)
       {
@@ -337,8 +370,10 @@ void loop()
       else
       {
         Serial.println("SEG FAULT attempt to read off end of memory");
-        delay(100);
+        printMemory();
+        while(1) delay (TEN_SECONDS);
       }
+      printStatus();
       printAddressAndDataBus(); 
       outputToDataPins(dataBus);
       
@@ -354,9 +389,9 @@ void loop()
       else
       {
         Serial.println("SEG FAULT attempt to read off end of memory");
-        delay(100);
+        printMemory();
+        while(1) delay (TEN_SECONDS);
       }      
       printAddressAndDataBus();
     }    
-//  }
 }
