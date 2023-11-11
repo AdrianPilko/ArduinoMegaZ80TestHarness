@@ -31,8 +31,9 @@ add them to the "simulated ROM"
 #include <avr/sleep.h>
 
 
-const int programMode = 5;
+const int programMode = 6;
 const int SIZE_OF_RAM = 512;
+const int NUMBER_OF_IO_PORTS = 3;
 //uint16_t addressBus = 0;
 uint8_t addressBus = 0;
 uint8_t dataBus = 0;
@@ -43,7 +44,10 @@ const int TEN_SECONDS = 10000;
 int addressPins[NUMBER_OF_ADDRESS_PINS] = {36,38,40,42,44,46,48,50,52};
 // pins on arduino are in sequence but z80 are not so have make sure Z80 is connected properly
 int dataPins[NUMBER_OF_DATA_PINS] = {37,35,33,31,29,27,25,23};
-int ioPorts[]
+/// we can use the many arduino pins as mock io ports and read/write to them from the z80
+// we also need some logic to map them to the memory address space
+int ioPortPinMapping[NUMBER_OF_IO_PORTS] = {10,11,12};
+unsigned char  Z80_IO[NUMBER_OF_IO_PORTS];
 
 
 
@@ -211,8 +215,8 @@ void resetCPU()
 
 void printAddressAndDataBus()
 {
-  Serial.println();
-  Serial.print("Address bus = 0x");
+  //Serial.println();
+  Serial.print("\t\tAddress bus = 0x");
   Serial.print(addressBus,HEX); 
   Serial.print(" ");
   Serial.print(addressBus,BIN); 
@@ -311,18 +315,39 @@ void initialiseProgram()
   }   
   else if (programMode == 5)
   {
-//0000   3E 55                  LD   a,0x55   
-//0002   06 0F                  LD   b,0x0f   
-//0004                OUTPUT:   
-//0004   D3 0F 00               OUT   (0x0f),a   
-//0007   10 FB                  DJNZ   output   
+//0000   3E 02                  LD   a,0x55       
+//0004   D3 0F 01               OUT   (0x01),a     ;; output 55 on io port 1
 //0009   76                     HALT       
     Z80_RAM[0] = 0x3e;
-    Z80_RAM[1] = 0x03;
+    Z80_RAM[1] = 0x01;
     Z80_RAM[2] = 0xD3;
-    Z80_RAM[3] = 0x0F;
+    Z80_RAM[3] = 0x01;
     Z80_RAM[4] = 0x76;        
   }
+  else if (programMode == 6)
+  {  // this outputs to an port twice switching on and off if led connected 
+      //0000   06 FF                  LD   b,0xff   ; load f into b for loop
+      //0002                OUTERLOOP:   
+      //0002   3E 01                  LD   a,0x01   ; load 1 into a
+      //0004   D3 01                  OUT   (0x01),a   ; output 1 to port 1
+      //0006   AF                     XOR   a   ; zero a
+      //0007   D3 01                  OUT   (0x01),a   ; output zero to port 1
+      //0009   10 F7                  DJNZ   outerLoop   
+      //000B   76                     HALT   
+
+      Z80_RAM[0]=0x06;
+      Z80_RAM[1]=0xFF;
+      Z80_RAM[2]=0x3e;
+      Z80_RAM[3]=0x01;
+      Z80_RAM[4]=0xd3;
+      Z80_RAM[5]=0x01;
+      Z80_RAM[6]=0xaf;
+      Z80_RAM[7]=0xD3;
+      Z80_RAM[8]=0x01;
+      Z80_RAM[9]=0x10;
+      Z80_RAM[10]=0xf7;
+      Z80_RAM[21]=0x76;      
+  }  
 }
 
 void printMemory()
@@ -344,6 +369,21 @@ void printMemory()
       Serial.print(Z80_RAM[i], HEX);
       Serial.print(":");
     }
+  }
+  Serial.println();
+}
+
+void printIOPorts()
+{
+  Serial.println();
+  Serial.println("IO ports contents:");
+  for (int i = 0; i < NUMBER_OF_IO_PORTS; i++)
+  {
+      Serial.print("Port = ");
+      Serial.print(i);    
+      Serial.print("=");
+      Serial.print(Z80_IO[i], HEX);
+      Serial.println("\t");
   }
   Serial.println();
 }
@@ -376,6 +416,7 @@ void loop()
       else
       {
         Serial.println("SEG FAULT attempt to read off end of memory");
+        Serial.flush();
         sleep_mode();
       }
       printStatus();
@@ -394,23 +435,56 @@ void loop()
       else
       {
         Serial.println("SEG FAULT attempt to read off end of memory");
+        Serial.flush();
         sleep_mode();
       }      
       printAddressAndDataBus();
     }    
+    // handle the out (nn), a instructions
     if ((writeEn) && (ioRequest) && (!refreshSet))
     {
       printStatus();
       dataBus = readFromDataPins();
-      if (addressBus < SIZE_OF_RAM)
+      if (addressBus < NUMBER_OF_IO_PORTS)
       {
-        Z80_RAM[addressBus] = dataBus;
+        Z80_IO[addressBus] = dataBus;
+        // we only have a 1 bit io on the arduino, not full 8 but output digital 1 to that mapped pin if lowest bit set
+        // the idea is to have an led connected to it and switch it on, ideally we'd have 8 leds per port!
+        if (Z80_IO[addressBus] & 0x01 == 1)
+        {
+            digitalWrite(ioPortPinMapping[addressBus], HIGH);
+        }
+        else
+        {
+            digitalWrite(ioPortPinMapping[addressBus], LOW);
+        }
       }
       else
       {
-        Serial.println("SEG FAULT attempt to read off end of memory");
+        Serial.println("IO FAULT attempt to write to non existant port");
+        Serial.flush();
         sleep_mode();
       }      
       printAddressAndDataBus();
+      printIOPorts();
     }        
+    // handle the in (nn), a instructions
+    if ((readEn) && (ioRequest) && (!refreshSet))
+    {
+      printStatus();
+      dataBus = readFromDataPins();
+      if (addressBus < NUMBER_OF_IO_PORTS)
+      {
+        dataBus = Z80_IO[addressBus];
+        outputToDataPins(dataBus);
+      }
+      else
+      {
+        Serial.println("IO FAULT attempt to read from to non existant port");
+        Serial.flush();
+        sleep_mode();
+      }      
+      printAddressAndDataBus();
+      printIOPorts();
+    }       
 }
