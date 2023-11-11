@@ -24,22 +24,20 @@ and some of the CPU control pins, then outputs to the terminal
 All clock, and control pins must be generated/handled externally
 
 
-it's possible assemble small programs using https://www.asm80.com/onepage/asmz80.html and
-add them to the "simulated ROM"
+it's possible assemble small programs using https://www.asm80.com/ and then paste the contents 
+of the hex file into programFile.h::Z80_ROM char[]
 */
 
+//#define DISABLE_SERIAL_OUTPUT
+//#define DEBUG_RUN_SLOW
 
 #include <avr/sleep.h>
 #include <stdio.h>
 #include "programFile.h"
 
 extern const char  ROM_image[];
-//#define DISABLE_SERIAL_OUTPUT
-
-const int programMode = 6;
-const int SIZE_OF_RAM = 64;
+const int SIZE_OF_RAM = 128;  // bytes
 const int NUMBER_OF_IO_PORTS = 3;
-//uint16_t addressBus = 0;
 uint8_t addressBus = 0;
 uint8_t dataBus = 0;
 
@@ -79,7 +77,11 @@ bool resetSet = true;
 
 unsigned char Z80_RAM[SIZE_OF_RAM]; // 512 bytes of RAM should be plenty here :)
 
-const int HALF_CLOCK_RATE = 1;
+#ifdef DEBUG_RUN_SLOW
+const int HALF_CLOCK_RATE = 100;   // slow mode for DEBUG
+#else
+const int HALF_CLOCK_RATE = 3;   // this becomes delay so 1 is delay 1 msec
+#endif
 
 void setAddressPinsToInput()
 {
@@ -131,6 +133,7 @@ void initialiseTest()
   pinMode(REFRESH, INPUT); 
   pinMode(IORQ, INPUT); 
   pinMode(HALT, INPUT);   
+  memset(Z80_RAM,0, sizeof(char) * SIZE_OF_RAM);
   initialiseProgram();
   setAddressPinsToInput();
   setDataToInput();
@@ -139,7 +142,7 @@ void initialiseTest()
 void setup() {
   // initialize serial communication at 9600 bits per second:
   Serial.begin(115200);
-  set_sleep_mode(SLEEP_MODE_STANDBY);
+  set_sleep_mode(SLEEP_MODE_STANDBY);  
   initialiseTest();
 }
 
@@ -225,19 +228,15 @@ void printAddressAndDataBus()
 {
   #ifndef DISABLE_SERIAL_OUTPUT
   
-  Serial.print("\t\tAddress bus = 0x");
+  // address 
+  Serial.print(" 0x");
   Serial.print(addressBus,HEX); 
-  Serial.print(" ");
-  Serial.print(addressBus,BIN); 
   if(writeEn)  
-    Serial.print("\t\tW "); 
+    Serial.print("\tW "); 
   else
-    Serial.print("\t\tR "); 
-  Serial.print("DataBus = 0x");
+    Serial.print("\tR "); 
+  Serial.print(" 0x");
   Serial.print(dataBus,HEX); 
-  Serial.print(" ");
-  Serial.print(dataBus,BIN); 
-  
   Serial.println();
   #endif  
 }
@@ -299,46 +298,6 @@ void initialiseProgram()
   Serial.print(progLengthInChars / 2);
   Serial.println(" bytes long");
   delay(500);
-}
-
-
-void initialiseProgramOldMethod()
-{
-  if (programMode == 6)
-  {  // this outputs to an port twice switching on and off if led connected 
-     // then sets the led on the port zero when it's complete
-      //0000   06 FF                  LD   b,0xff   ; load f into b for loop
-      //0002                OUTERLOOP:   
-      //0002   3E 01                  LD   a,0x01   ; load 1 into a
-      //0004   D3 01                  OUT   (0x01),a   ; output 1 to port 1
-      //0006   AF                     XOR   a   ; zero a
-      //0007   D3 01                  OUT   (0x01),a   ; output zero to port 1
-      //0009   10 F7                  DJNZ   outerLoop   
-
-      //Z80_RAM[11]=0x3e;
-      //Z80_RAM[12]=0xff;     
-      //Z80_RAM[7]=0xD3;   // output ff to io port 0
-      //Z80_RAM[8]=0x00;      
-      //000B   76                     HALT   
-
-      Z80_RAM[0]=0x06;
-      Z80_RAM[1]=0x2F;
-      //Z80_RAM[1]=0x03;  // changed to 3 temporarily
-      Z80_RAM[2]=0x3e;
-      Z80_RAM[3]=0xff;
-      Z80_RAM[4]=0xd3;
-      Z80_RAM[5]=0x01;
-      Z80_RAM[6]=0xaf;
-      Z80_RAM[7]=0xD3;
-      Z80_RAM[8]=0x01;
-      Z80_RAM[9]=0x10;
-      Z80_RAM[10]=0xf7;
-      Z80_RAM[11]=0x3e;
-      Z80_RAM[12]=0xff;     
-      Z80_RAM[13]=0xD3;   // output ff to io port 0
-      Z80_RAM[14]=0x00;
-      Z80_RAM[15]=0x76;      
-  }  
 }
 
 void printMemory()
@@ -411,6 +370,7 @@ void loop()
       else
       {
         Serial.println("SEG FAULT attempt to read off end of memory");
+        printMemory();
         Serial.flush();
         sleep_mode();
       }
@@ -430,6 +390,7 @@ void loop()
       else
       {
         Serial.println("SEG FAULT attempt to read off end of memory");
+        printMemory();
         Serial.flush();
         sleep_mode();
       }      
@@ -456,7 +417,10 @@ void loop()
       }
       else
       {
-        Serial.println("IO FAULT attempt to write to non existant port");
+        Serial.print("IO FAULT attempt to write to non existant port = ");
+        Serial.println(addressBus);
+        printIOPorts();
+        printMemory();
         Serial.flush();
         sleep_mode();
       }      
@@ -476,6 +440,7 @@ void loop()
       else
       {
         Serial.println("IO FAULT attempt to read from to non existant port");
+        printMemory();
         Serial.flush();
         sleep_mode();
       }      
