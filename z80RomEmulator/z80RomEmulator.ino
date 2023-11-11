@@ -334,6 +334,7 @@ void initialiseProgram()
   }
   else if (programMode == 6)
   {  // this outputs to an port twice switching on and off if led connected 
+     // then sets the led on the port zero when it's complete
       //0000   06 FF                  LD   b,0xff   ; load f into b for loop
       //0002                OUTERLOOP:   
       //0002   3E 01                  LD   a,0x01   ; load 1 into a
@@ -341,12 +342,18 @@ void initialiseProgram()
       //0006   AF                     XOR   a   ; zero a
       //0007   D3 01                  OUT   (0x01),a   ; output zero to port 1
       //0009   10 F7                  DJNZ   outerLoop   
+
+      //Z80_RAM[11]=0x3e;
+      //Z80_RAM[12]=0xff;     
+      //Z80_RAM[7]=0xD3;   // output ff to io port 0
+      //Z80_RAM[8]=0x00;      
       //000B   76                     HALT   
 
       Z80_RAM[0]=0x06;
-      Z80_RAM[1]=0xFF;
+      Z80_RAM[1]=0x2F;
+      //Z80_RAM[1]=0x03;  // changed to 3 temporarily
       Z80_RAM[2]=0x3e;
-      Z80_RAM[3]=0x01;
+      Z80_RAM[3]=0xff;
       Z80_RAM[4]=0xd3;
       Z80_RAM[5]=0x01;
       Z80_RAM[6]=0xaf;
@@ -354,7 +361,11 @@ void initialiseProgram()
       Z80_RAM[8]=0x01;
       Z80_RAM[9]=0x10;
       Z80_RAM[10]=0xf7;
-      Z80_RAM[21]=0x76;      
+      Z80_RAM[11]=0x3e;
+      Z80_RAM[12]=0xff;     
+      Z80_RAM[13]=0xD3;   // output ff to io port 0
+      Z80_RAM[14]=0x00;
+      Z80_RAM[15]=0x76;      
   }  
 }
 
