@@ -399,7 +399,9 @@ void printIOPorts()
 }
 
 void loop() 
-{  
+{ 
+  while(1)
+  {
     delay(HALF_CLOCK_RATE);
     toggleClock();
     delay(HALF_CLOCK_RATE);
@@ -497,4 +499,5 @@ void loop()
       printAddressAndDataBus();
       printIOPorts();
     }       
+  }
 }
