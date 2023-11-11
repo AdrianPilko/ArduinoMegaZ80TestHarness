@@ -31,7 +31,7 @@ add them to the "simulated ROM"
 #include <avr/sleep.h>
 
 
-const int programMode = 2;
+const int programMode = 5;
 const int SIZE_OF_RAM = 512;
 //uint16_t addressBus = 0;
 uint8_t addressBus = 0;
@@ -43,6 +43,7 @@ const int TEN_SECONDS = 10000;
 int addressPins[NUMBER_OF_ADDRESS_PINS] = {36,38,40,42,44,46,48,50,52};
 // pins on arduino are in sequence but z80 are not so have make sure Z80 is connected properly
 int dataPins[NUMBER_OF_DATA_PINS] = {37,35,33,31,29,27,25,23};
+int ioPorts[]
 
 
 
@@ -308,6 +309,20 @@ void initialiseProgram()
     Z80_RAM[4] = 0b00000000;
     Z80_RAM[5] = 0x76;  //   halt
   }   
+  else if (programMode == 5)
+  {
+//0000   3E 55                  LD   a,0x55   
+//0002   06 0F                  LD   b,0x0f   
+//0004                OUTPUT:   
+//0004   D3 0F 00               OUT   (0x0f),a   
+//0007   10 FB                  DJNZ   output   
+//0009   76                     HALT       
+    Z80_RAM[0] = 0x3e;
+    Z80_RAM[1] = 0x03;
+    Z80_RAM[2] = 0xD3;
+    Z80_RAM[3] = 0x0F;
+    Z80_RAM[4] = 0x76;        
+  }
 }
 
 void printMemory()
@@ -383,4 +398,19 @@ void loop()
       }      
       printAddressAndDataBus();
     }    
+    if ((writeEn) && (ioRequest) && (!refreshSet))
+    {
+      printStatus();
+      dataBus = readFromDataPins();
+      if (addressBus < SIZE_OF_RAM)
+      {
+        Z80_RAM[addressBus] = dataBus;
+      }
+      else
+      {
+        Serial.println("SEG FAULT attempt to read off end of memory");
+        sleep_mode();
+      }      
+      printAddressAndDataBus();
+    }        
 }
