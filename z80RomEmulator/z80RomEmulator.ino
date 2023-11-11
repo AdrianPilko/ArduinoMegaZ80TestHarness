@@ -28,8 +28,11 @@ it's possible assemble small programs using https://www.asm80.com/onepage/asmz80
 add them to the "simulated ROM"
 */
 
+
 #include <avr/sleep.h>
 
+
+//#define DISABLE_SERIAL_OUTPUT
 
 const int programMode = 6;
 const int SIZE_OF_RAM = 512;
@@ -74,7 +77,7 @@ bool resetSet = true;
 
 unsigned char Z80_RAM[SIZE_OF_RAM]; // 512 bytes of RAM should be plenty here :)
 
-const int HALF_CLOCK_RATE = 2;
+const int HALF_CLOCK_RATE = 1;
 
 void setAddressPinsToInput()
 {
@@ -163,15 +166,18 @@ void readStatus()
 
 void printStatus()
 {
+  #ifndef DISABLE_SERIAL_OUTPUT
   if (readEn == true) Serial.print("RD ");
   if (writeEn == true) Serial.print("WR ");
   if (memRequest == true) Serial.print("MREQ ");
   if (refreshSet == true) Serial.print("REFRESH ");
   if (ioRequest == true) Serial.print("IORQ ");
+  #endif  
   if (haltSet == true) 
   {
-      Serial.println("PROCESSOR HALT");
+      Serial.println("PROCESSOR HALT");  
   }
+
 }
 
 void readAddressBus()
@@ -207,15 +213,16 @@ void resetCPU()
     toggleClock();
     delay(20);
     toggleClock();
-    delay(20);
-    Serial.println("Reset");
+    delay(20);    
   }   
   digitalWrite(RESET, HIGH);
+  Serial.println("CPU is Reset");
 }
 
 void printAddressAndDataBus()
 {
-  //Serial.println();
+  #ifndef DISABLE_SERIAL_OUTPUT
+  
   Serial.print("\t\tAddress bus = 0x");
   Serial.print(addressBus,HEX); 
   Serial.print(" ");
@@ -230,6 +237,7 @@ void printAddressAndDataBus()
   Serial.print(dataBus,BIN); 
   
   Serial.println();
+  #endif  
 }
 
 
@@ -375,6 +383,7 @@ void printMemory()
 
 void printIOPorts()
 {
+  #ifndef DISABLE_SERIAL_OUTPUT
   Serial.println();
   Serial.println("IO ports contents:");
   for (int i = 0; i < NUMBER_OF_IO_PORTS; i++)
@@ -386,6 +395,7 @@ void printIOPorts()
       Serial.println("\t");
   }
   Serial.println();
+  #endif
 }
 
 void loop() 
