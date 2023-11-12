@@ -7,3 +7,6 @@ z80RomEmulator/memfill.txt
 z80RomEmulator/flashled.txt
 z80RomEmulator/flashled.lst
 z80RomEmulator/flashled.obj
+z80RomEmulator/flashled2.obj
+z80RomEmulator/flashled2.lst
+z80RomEmulator/flashled2.txt
