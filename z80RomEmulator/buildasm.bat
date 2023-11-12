@@ -5,4 +5,5 @@ del *.sym
 del *.hex
 
 call zxasm memcheck
+REM call zxasm memfill
 pause

@@ -37,8 +37,9 @@ of the hex file into programFile.h::Z80_ROM char[]
 
 extern const char  ROM_image[];
 const int SIZE_OF_RAM = 2048;  // bytes
+//const int SIZE_OF_RAM = 512;  // bytes
 const int NUMBER_OF_IO_PORTS = 3;
-uint8_t addressBus = 0;
+uint16_t addressBus = 0;
 uint8_t dataBus = 0;
 
 const int TEN_SECONDS = 10000;
@@ -83,7 +84,7 @@ unsigned char Z80_RAM[SIZE_OF_RAM]; // 512 bytes of RAM should be plenty here :)
 #ifdef DEBUG_RUN_SLOW
 const int HALF_CLOCK_RATE = 100;   // slow mode for DEBUG
 #else
-const int HALF_CLOCK_RATE = 2;   // this becomes delay so 1 is delay 1 msec
+const int HALF_CLOCK_RATE = 1;   // this becomes delay so 1 is delay 1 msec
 #endif
 
 void setAddressPinsToInput()
@@ -369,9 +370,10 @@ void loop()
        Serial.flush();
        sleep_mode();
     }
-    readAddressBus();               
+    readAddressBus();
     // the z80 will assert the RD and MREQ when reading from RAM, bvut we also have to check that REFRSH is not active
     // the logic here is active high (reverse when read from pins), the z80 in reality uses active low for cpu control pins
+
     if ((readEn) && (memRequest) && (!refreshSet))
     {
       if (addressBus < SIZE_OF_RAM)
@@ -412,6 +414,7 @@ void loop()
     {
       printStatus();
       dataBus = readFromDataPins();
+      addressBus &= 0x00ff;  // the z80 does put stuff in upper 16bits of the address for some reason on IORQ
       if (addressBus < NUMBER_OF_IO_PORTS)
       {
         Z80_IO[addressBus] = dataBus;
@@ -428,8 +431,10 @@ void loop()
       }
       else
       {
-        Serial.print("IO FAULT attempt to write to non existant port = ");
-        Serial.println(addressBus);
+        Serial.print("IO FAULT attempt to write to non existant port at address = ");
+        Serial.println(addressBus, HEX);
+        Serial.print(" with data = ");
+        Serial.println(dataBus, HEX);
         printIOPorts();
         printMemory();
         Serial.flush();
