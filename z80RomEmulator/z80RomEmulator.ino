@@ -28,7 +28,7 @@ it's possible assemble small programs using https://www.asm80.com/ and then past
 of the hex file into programFile.h::Z80_ROM char[]
 */
 
-//#define DISABLE_SERIAL_OUTPUT
+#define DISABLE_SERIAL_OUTPUT
 //#define DEBUG_RUN_SLOW
 
 #include <avr/sleep.h>
@@ -150,7 +150,7 @@ void setup() {
   initialiseTest();
 }
 
-uint8_t readFromDataPins()
+inline uint8_t readFromDataPins()
 {
     uint8_t rv = 0;
     setDataToInput();
@@ -161,7 +161,7 @@ uint8_t readFromDataPins()
     return rv;
 }
 
-void readStatus()
+inline void readStatus()
 {
   writeEn = !digitalRead(WR);    /// active low so not added before
   readEn = !digitalRead(RD);  /// active low so not added before
@@ -173,7 +173,7 @@ void readStatus()
 
 
 
-void printStatus()
+inline void printStatus()
 {
   #ifndef DISABLE_SERIAL_OUTPUT
   if (readEn == true) Serial.print("RD ");
@@ -189,7 +189,7 @@ void printStatus()
 
 }
 
-void readAddressBus()
+inline void readAddressBus()
 {    
     addressBus = 0;
     for (int i = 0; i < NUMBER_OF_ADDRESS_PINS; i++)
@@ -199,7 +199,7 @@ void readAddressBus()
     }
 }
 
-void toggleClock()
+inline void toggleClock()
 {
   static int clockState = LOW;
   if (clockState == LOW)
@@ -214,7 +214,7 @@ void toggleClock()
   }
 }
 
-void resetCPU()
+inline void resetCPU()
 {
   digitalWrite(RESET, LOW);
   for (int i = 0; i < 10; i++)
@@ -228,7 +228,7 @@ void resetCPU()
   Serial.println("CPU is Reset");
 }
 
-void printAddressAndDataBus()
+inline void printAddressAndDataBus()
 {
   #ifndef DISABLE_SERIAL_OUTPUT
   
