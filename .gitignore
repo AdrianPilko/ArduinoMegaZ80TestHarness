@@ -4,3 +4,6 @@ z80RomEmulator/memcheck.obj
 z80RomEmulator/memcheck.txt
 z80RomEmulator/memfill.obj
 z80RomEmulator/memfill.txt
+z80RomEmulator/flashled.txt
+z80RomEmulator/flashled.lst
+z80RomEmulator/flashled.obj

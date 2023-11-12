@@ -1,9 +1,11 @@
 @echo off
+REM set "inputFile=memcheck.obj"
+REM set "outputFile=memcheckstripped.txt"
+
 setlocal enabledelayedexpansion
 
-set "inputFile=memcheck.obj"
-set "outputFile=memcheckstripped.txt"
-
+set "inputFile=flashled.obj"
+set "outputFile=flashled.txt"
 
 if exist "%outputFile%" del "%outputFile%"
 

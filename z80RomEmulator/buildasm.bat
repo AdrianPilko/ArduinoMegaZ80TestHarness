@@ -3,7 +3,9 @@ REM clean up before calling assembler
 del *.lst
 del *.sym
 del *.hex
+del *.obj
 
-call zxasm memcheck
+REM call zxasm memcheck
 REM call zxasm memfill
+call zxasm flashled
 pause

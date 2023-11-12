@@ -1,6 +1,8 @@
 note that the assembler ouput has a format that needs tweaking
 before loading into the char array in the arduino programFile.h
 
+(NOTE stripasm.bat does some of the work required below)
+
 the raw output in the .obj file is as such
 
 :180000000E00CD4D000E01CD4D0031000421200406FF0E01CD46003EB8
