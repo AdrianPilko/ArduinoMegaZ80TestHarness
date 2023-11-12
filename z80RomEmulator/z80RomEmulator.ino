@@ -36,16 +36,19 @@ of the hex file into programFile.h::Z80_ROM char[]
 #include "programFile.h"
 
 extern const char  ROM_image[];
-const int SIZE_OF_RAM = 128;  // bytes
+const int SIZE_OF_RAM = 2048;  // bytes
 const int NUMBER_OF_IO_PORTS = 3;
 uint8_t addressBus = 0;
 uint8_t dataBus = 0;
 
 const int TEN_SECONDS = 10000;
-#define NUMBER_OF_ADDRESS_PINS 9
+#define NUMBER_OF_ADDRESS_PINS 11     // this gives memory size of 2^11 = 2048
 #define NUMBER_OF_DATA_PINS 8
-int addressPins[NUMBER_OF_ADDRESS_PINS] = {36,38,40,42,44,46,48,50,52};
+                                           // A10 pin  ======>    A0 pin
+int addressPins[NUMBER_OF_ADDRESS_PINS] = {32,34,36,38,40,42,44,46,48,50,52};
+
 // pins on arduino are in sequence but z80 are not so have make sure Z80 is connected properly
+                                  // D0   ======>         D7 pin
 int dataPins[NUMBER_OF_DATA_PINS] = {37,35,33,31,29,27,25,23};
 /// we can use the many arduino pins as mock io ports and read/write to them from the z80
 // we also need some logic to map them to the memory address space
@@ -80,7 +83,7 @@ unsigned char Z80_RAM[SIZE_OF_RAM]; // 512 bytes of RAM should be plenty here :)
 #ifdef DEBUG_RUN_SLOW
 const int HALF_CLOCK_RATE = 100;   // slow mode for DEBUG
 #else
-const int HALF_CLOCK_RATE = 3;   // this becomes delay so 1 is delay 1 msec
+const int HALF_CLOCK_RATE = 2;   // this becomes delay so 1 is delay 1 msec
 #endif
 
 void setAddressPinsToInput()
@@ -306,18 +309,26 @@ void printMemory()
   Serial.println("Memory contents");
   for (int i = 0; i < SIZE_OF_RAM; i++)
   {
-    if (i % 8 == 0) {      
-      Serial.println();
+    if (i % 16 == 0) 
+    {      
+      Serial.println();      
       Serial.print("address = 0x");
       Serial.print(i, HEX);    
-      Serial.print(":");
+      Serial.print("\t\t");
+      if (Z80_RAM[i] < 16) // print a dummy zero
+      {
+        Serial.print("0");
+      }      
       Serial.print(Z80_RAM[i], HEX);
-      Serial.print(":");
     }    
     else
-    {      
-      Serial.print(Z80_RAM[i], HEX);
-      Serial.print(":");
+    { 
+      Serial.print(":");     
+      if (Z80_RAM[i] < 16) // print a dummy zero
+      {
+        Serial.print("0");
+      }
+      Serial.print(Z80_RAM[i], HEX);      
     }
   }
   Serial.println();
