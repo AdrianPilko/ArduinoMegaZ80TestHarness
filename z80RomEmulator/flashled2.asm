@@ -1,6 +1,8 @@
     .org 0
-  
-    ld sp, $00ff
+    ; theory is that you have to set the SP by the following, not ld sp, $400
+    ld   hl,$0400
+    ex   (sp),hl    
+        
     ld b, $ff
 outerLoop:      
     ld a, 1  
@@ -9,18 +11,29 @@ outerLoop:
     nop    
     ld a, 0
     out (0), a
-
     push bc 
     ld b, $f    
 innerLoop:    
     ld a, 0
     out (1), a
     nop
-    nop    
+    call doNopAndRet
     ld a, 1  
     out (1), a    
     djnz innerLoop   
     pop bc
     djnz outerLoop         
+    
+doNopAndRet:   ; subrouting to test subroutines work!
+    nop
+    ret
+    .org $44
+    halt
+    halt
+    halt
+    halt
+    halt
+    halt
+    halt
 #END
 

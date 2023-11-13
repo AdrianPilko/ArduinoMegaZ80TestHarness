@@ -1,6 +1,11 @@
 note that the assembler ouput has a format that needs tweaking
 before loading into the char array in the arduino programFile.h
 
+This is beacuse it's output as an SREC (S record). I have realised though that 
+to make code work properly whjen there are multiple .org directives, that the
+srecord will have to be loaded in, so that code is put in correct memory locations
+and not just from zero up.
+
 (NOTE stripasm.bat does some of the work required below)
 
 the raw output in the .obj file is as such

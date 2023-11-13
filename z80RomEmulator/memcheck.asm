@@ -5,6 +5,8 @@
     
     ;;; initialise LEDs on port zero and one to be off
     .org 0
+    ld   hl,$03f0
+    ex   (sp),hl      
     xor a
     out (0), a
     out (1), a

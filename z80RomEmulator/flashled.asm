@@ -1,19 +1,19 @@
     .org 0          
-    ld sp, $00ff
+    ld   hl,$03f0
+    ex   (sp),hl  
+    
     ld b, $ff
 outerLoop:      
     push bc 
-    ld b, $f
-
     ld a, 1  
     out (0), a
     
-innerLoop:    
-    xor a
-    out (1), a
-    ld a, 1  
-    out (1), a
-    
+    ld b, $2
+innerLoop:        
+    call setLedOn_PORT1  
+    nop    
+    call setLedOff_PORT1
+    nop
     djnz innerLoop
 
     xor a
@@ -23,15 +23,13 @@ innerLoop:
     djnz outerLoop
     halt      
     
-setLedOn_PORTc:
-    ld a, 1
-    ;out (c), a    
+setLedOn_PORT1:
+    ld a, 1    
     out (1), a
     ret
-setLedOff_PORTc:
-    xor a
+setLedOff_PORT1:
+    ld a, 0
     out (1), a
-    ;out (c), a    
     ret    
 #END
 

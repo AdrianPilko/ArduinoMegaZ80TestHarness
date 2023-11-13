@@ -28,7 +28,7 @@ it's possible assemble small programs using https://www.asm80.com/ and then past
 of the hex file into programFile.h::Z80_ROM char[]
 */
 
-#define DISABLE_SERIAL_OUTPUT
+//#define DISABLE_SERIAL_OUTPUT
 //#define DEBUG_RUN_SLOW
 
 #include <avr/sleep.h>
@@ -82,7 +82,7 @@ bool resetSet = true;
 unsigned char Z80_RAM[SIZE_OF_RAM]; // 512 bytes of RAM should be plenty here :)
 
 #ifdef DEBUG_RUN_SLOW
-const int HALF_CLOCK_RATE = 100;   // slow mode for DEBUG
+const int HALF_CLOCK_RATE = 50;   // slow mode for DEBUG
 #else
 const int HALF_CLOCK_RATE = 1;   // this becomes delay so 1 is delay 1 msec
 #endif

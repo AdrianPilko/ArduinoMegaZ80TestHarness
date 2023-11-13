@@ -5,7 +5,8 @@ del *.sym
 del *.hex
 del *.obj
 
-call zxasm flashled2
+REM call zxasm flashled2
+REM call zxasm teststack
 REM call zxasm memcheck
 REM call zxasm memfill
-REM call zxasm flashled
+call zxasm flashled

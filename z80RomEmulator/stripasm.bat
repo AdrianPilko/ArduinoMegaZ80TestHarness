@@ -3,8 +3,8 @@ REM Make sure you set the input output files properly to what you have
 
 setlocal enabledelayedexpansion
 
-set "inputFile=flashled2.obj"
-set "outputFile=flashled2.txt"
+set "inputFile=flashled.obj"
+set "outputFile=flashled.txt"
 
 if exist "%outputFile%" del "%outputFile%"
 
