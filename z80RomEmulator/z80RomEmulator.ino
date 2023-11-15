@@ -30,6 +30,7 @@ of the hex file into programFile.h::Z80_ROM char[]
 
 //#define DISABLE_SERIAL_OUTPUT
 #define DEBUG_RUN_SLOW
+#define FULL_PRINT_DEBUG
 
 #include <avr/sleep.h>
 #include <stdio.h>
@@ -413,6 +414,12 @@ void loop()
        sleep_mode();
     }
     readAddressBus();
+#ifdef FULL_PRINT_DEBUG    
+    Serial.print("D ");
+    printStatus();
+    printAddressAndDataBus(); 
+#endif    
+
     // the z80 will assert the RD and MREQ when reading from RAM, bvut we also have to check that REFRSH is not active
     // the logic here is active high (reverse when read from pins), the z80 in reality uses active low for cpu control pins
 
@@ -456,25 +463,25 @@ void loop()
     {
       printStatus();
       dataBus = readFromDataPins();
-      addressBus &= 0x00ff;  // the z80 does put stuff in upper 16bits of the address for some reason on IORQ
-      if (addressBus < NUMBER_OF_IO_PORTS)
+      uint16_t ioAddress = 0x00ff & addressBus;  // the z80 does put stuff in upper 16bits of the address for some reason on IORQ
+      if (ioAddress < NUMBER_OF_IO_PORTS)
       {
-        Z80_IO[addressBus] = dataBus;
+        Z80_IO[ioAddress] = dataBus;
         // we only have a 1 bit io on the arduino, not full 8 but output digital 1 to that mapped pin if lowest bit set
         // the idea is to have an led connected to it and switch it on, ideally we'd have 8 leds per port!
-        if (Z80_IO[addressBus] & 0x01 == 1)
+        if (Z80_IO[ioAddress] & 0x01 == 1)
         {
-            digitalWrite(ioPortPinMapping[addressBus], HIGH);
+            digitalWrite(ioPortPinMapping[ioAddress], HIGH);
         }
         else
         {
-            digitalWrite(ioPortPinMapping[addressBus], LOW);
+            digitalWrite(ioPortPinMapping[ioAddress], LOW);
         }
       }
       else
       {
-        Serial.print("IO FAULT attempt to write to non existant port at address = ");
-        Serial.println(addressBus, HEX);
+        Serial.print("BUS ERROR attempt to write to non existant port at address = ");
+        Serial.println(ioAddress, HEX);
         Serial.print(" with data = ");
         Serial.println(dataBus, HEX);
         printIOPorts();
@@ -484,7 +491,8 @@ void loop()
       }      
       printAddressAndDataBus();
       printIOPorts();
-    }        
+    }      
+    /* not implememnted yet  
     // handle the in (nn), a instructions
     if ((readEn) && (ioRequest) && (!refreshSet))
     {
@@ -504,6 +512,6 @@ void loop()
       }      
       printAddressAndDataBus();
       printIOPorts();
-    }       
+    }       */
   }
 }
