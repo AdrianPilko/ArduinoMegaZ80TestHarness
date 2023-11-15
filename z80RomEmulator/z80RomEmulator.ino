@@ -29,7 +29,7 @@ of the hex file into programFile.h::Z80_ROM char[]
 */
 
 //#define DISABLE_SERIAL_OUTPUT
-//#define DEBUG_RUN_SLOW
+#define DEBUG_RUN_SLOW
 
 #include <avr/sleep.h>
 #include <stdio.h>
@@ -274,32 +274,74 @@ void initialiseProgram()
   // zero must be fully expanded ie 00 or 01, 0 or 1
   //char ROM_image[] = "062F033effd301afD30110f73effD30076\0";  
 
-  size_t progLengthInChars = strlen(ROM_image);
-  char * ptrToROM = ROM_image;
+  // read in the z80 srec, example:
+  //:1800000021F003F90605CD0F00CD180010F8763E01D30100000000C9B5
+  //:090018003E00D30100000000C904
+  //:00000001FF
+  // https://en.wikipedia.org/wiki/SREC_(file_format)
+  //    16 bits(low byte high byte)    16 bits    "byte count number of bytes (2digit hex)"      ignore checksum(for now)
+  //: Byte Count	Address   	Data	Checksum
   
-  int programCounter = 0;
 
-  for (int i = 0; i < progLengthInChars; i++)
+  size_t arrayIndex = 0; 
+  size_t lengthOfCurrentData = 0;
+  size_t TotalLengthOfProgram = 0;
+  const char * ptrToROM = ROM_image;
+
+  while (arrayIndex < strlen(ROM_image))
   {
-    char tempTwochars[3];
-    tempTwochars[0]=*ptrToROM;
-    ptrToROM++;
-    tempTwochars[1]=*ptrToROM;
-    ptrToROM++;
-    tempTwochars[2]='\0';
-    int theInstructionOrData = (int)strtol(tempTwochars, NULL, 16);
+    // the data length field is 16 bits and low byte high byte  
+    char tempDataLengthchars[5];  /// one extra for null terminator for strtol
+    if (arrayIndex++);  // skip past the ":" at start of "line"
+    tempDataLengthchars[2]=ptrToROM[arrayIndex++]; // ingore first char ":"
+    tempDataLengthchars[3]=ptrToROM[arrayIndex++];
+    tempDataLengthchars[0]=ptrToROM[arrayIndex++];
+    tempDataLengthchars[1]=ptrToROM[arrayIndex++];
+    tempDataLengthchars[4]='\0';
+    size_t lengthOfData = (int)strtol(tempDataLengthchars, NULL, 16);
 
-    Z80_RAM[programCounter] = theInstructionOrData;
-    programCounter++;
+    char tempAddresschars[5];  /// one extra for null terminator for strtol
+    tempAddresschars[2]=ptrToROM[arrayIndex++]; 
+    tempAddresschars[3]=ptrToROM[arrayIndex++];
+    tempAddresschars[0]=ptrToROM[arrayIndex++];
+    tempAddresschars[1]=ptrToROM[arrayIndex++];
+    tempAddresschars[4]='\0';
+    size_t addressToPutData = (int)strtol(tempAddresschars, NULL, 16);
+
+    
+    Serial.print("lengthOfData=");
+    Serial.println(lengthOfData, HEX);
+    Serial.print("addressToPutData=");
+    Serial.println(addressToPutData, HEX);
+
+    for (int i = 0; i < lengthOfData; i++)
+    {
+      char tempDatachars[3];
+      tempDatachars[0]=ptrToROM[arrayIndex++];    
+      tempDatachars[1]=ptrToROM[arrayIndex++];
+      tempDatachars[2]='\0';
+      int theInstructionOrData = (int)strtol(tempDatachars, NULL, 16);
+
+      Z80_RAM[addressToPutData] = theInstructionOrData;
+      addressToPutData++;
+      TotalLengthOfProgram++;
+    }
+    // after each data block there's a 2 hex digit checksum
+    char checksumchars[3];  /// one extra for null terminator for strtol
+    checksumchars[0]=ptrToROM[arrayIndex++]; 
+    checksumchars[1]=ptrToROM[arrayIndex++];
+    checksumchars[2]='\0';
+    int checksum = (int)strtol(checksumchars, NULL, 16);
+    Serial.print("checksumchars=");
+    Serial.println(checksum,HEX);
   }
-  
   Serial.println("ROM Image = ");
   Serial.println(ROM_image);
   printMemory();
   Serial.flush();
   
   Serial.print("loaded program ");
-  Serial.print(progLengthInChars / 2);
+  Serial.print(TotalLengthOfProgram);
   Serial.println(" bytes long");
   delay(500);
 }

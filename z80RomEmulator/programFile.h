@@ -1,25 +1,14 @@
 #ifndef PROGRAMFILE
 #define PROGRAMFILE
 
-extern const char ROM_image[] ="21F003E306FFC53E01D3000602CD1E0000CD23000010F6AFD300C110E9763E01D301C93E00D301C9\0";
-//extern const char ROM_image[] ="21F003E306FFC5060F3E01D300AFD3013E01D30110F7AFD300C110EA763E01D301C9AFD301C9\0";
-//extern const char ROM_image[] ="210004E3215500E521AA00E5C1C1CD12007600C9\0";                             
-//extern const char ROM_image[] ="31FF0006FF3E01D30000003E00D300C5060F3E00D30100003E01D30110F4C110E4\0";
-//extern const char ROM_image[] ="31FF0006FFC5060F3E01D300AFD3013E01D30110F7AFD300C110EA763E01D301C9AFD301C9\0";
-//extern const char ROM_image[] ="31FF000603C50603AFD3003E01D300AFD3013E01D30110F0C110EA76\0";
-//extern const char ROM_image[] ="31FF003EFFF53E00D300F1D3003E00D3013E01D301C3030076\0"; // with stack
-//extern const char ROM_image[] ="3E00D3003E01D3003E00D3013E01D301C3000076\0";
-
-
-// extern const char ROM_image[] = "062F033effd301afD30110f73effD30076\0";    // simple code to output to 2 leds
-//extern const char ROM_image[] = "0E003EFFED790E003E00ED79C3000076\0";  /// flash led on port zer0 (pin 10 of arduino mega)
-
-//extern const char ROM_image[] = "0E003EFFED790E003E00ED790E013EFFED790E013E00ED79C3000076\0"; // flash both LED on off
-
-// this requires 2048 size ram, built from memcheck.asm 
-//extern const char ROM_image[] ="AFD300D30121000406023E01D3013E00D3013E55772310F2\
-//3E01D30021000406023E01D3013E00D3011E557EBBCA3B00\
-//10EF3E01D3003E01D30176C33B0076\0";
+// the rom image can be copied from the .obj file which is an z80 srec format, as output by tasm
+// the arduino code parses it doirectly provided it has the C '\0' string null terminator added and  '\' if on ,multiple lines
+extern const char ROM_image[] ="\
+:1800100021F003F906053E01D301000000003E003E003E00D301D3014B\
+:09002800D3010000000010E6768F\
+:030040007676765B\
+:00000001FF\
+\0";
 
 #endif
 

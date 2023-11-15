@@ -1,35 +1,30 @@
-    .org 0          
+    .org $0010          
     ld   hl,$03f0
-    ex   (sp),hl  
+    ld   sp, hl  
     
-    ld b, $ff
-outerLoop:      
-    push bc 
-    ld a, 1  
-    out (0), a
-    
-    ld b, $2
+    ld b, $5
 innerLoop:        
-    call setLedOn_PORT1  
-    nop    
-    call setLedOff_PORT1
-    nop
-    djnz innerLoop
-
-    xor a
-    out (0), a
-    
-    pop bc
-    djnz outerLoop
-    halt      
-    
-setLedOn_PORT1:
     ld a, 1    
     out (1), a
-    ret
-setLedOff_PORT1:
+    nop
+    nop
+    nop
+    nop        
     ld a, 0
+    ld a, 0
+    ld a, 0
+    out (1), a   ;; seams to fail here in arduino code and jump to 0x40???
     out (1), a
-    ret    
+    out (1), a    
+    nop
+    nop
+    nop
+    nop        
+    djnz innerLoop
+    halt      
+    .org $0040       ; make sure it halts, was seeing an error where it jumps pc to $40 ??
+    halt
+    halt
+    halt
 #END
 
