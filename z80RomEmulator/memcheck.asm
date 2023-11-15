@@ -19,7 +19,7 @@
     out (2), a    
     ld b, $30 
 testLED:    
-
+    nop
     djnz testLED
     xor a
     out (0), a    ; now output zero to the led ports to turn of
@@ -28,27 +28,15 @@ testLED:
 
     ld hl, $0400    ; start of ram at $400 
     ld b, $ff      ; 255 bytes to check (with more mem need nested loop)
-memFill:
-    ld a, 1     ;; flash led on port 1 (amber)
-    out (1), a
-    ld a, 0
-    out (1), a    
-    
+memFill:   
     ld a, $55   ; fill all memory with $55 = 1010101
     ld (hl), a
     inc hl   
     djnz memFill
 
-   
     ld hl, $0400    ; start of ram at $400 but need to allow 32bytes for stack
     ld b, $ff      ; 255 bytes to check (with more mem need nested loop)
-
 memReadBack:    ;; now check that the value writtin can be read back  
-    ld a, 1     ;; flash led on port 1 (amber)
-    out (1), a
-    ld a, 0
-    out (1), a   
-    
     ld e, $55
     ld a, (hl)   
     cp e
