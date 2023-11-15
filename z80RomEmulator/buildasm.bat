@@ -7,6 +7,7 @@ del *.obj
 
 REM call zxasm flashled2
 REM call zxasm teststack
-call zxasm memcheck
+REM call zxasm memcheck
 REM call zxasm memfill
 REM call zxasm flashled
+call zxasm add

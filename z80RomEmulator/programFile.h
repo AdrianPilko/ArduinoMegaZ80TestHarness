@@ -4,13 +4,18 @@
 // the rom image can be copied from the .obj file which is an z80 srec format, as output by tasm
 // the arduino code parses it doirectly provided it has the C '\0' string null terminator added and  '\' if on ,multiple lines
 
-// program is a memcheck (only does 255 bytes currentlty)
+// program is a memcheck is setup for MAKE_ROM_AND_RAM_SMALL
+//extern const char ROM_image[] ="\
+//:180000003110022110041E557B777EBB23C21400C30800763E01D30284\
+//:040018002201027649\
+//:020201000000FB\
+//:00000001FF\
+//\0";
 extern const char ROM_image[] ="\
-:1800000031F003AFD300D301D3023E01D3003E01D3013E01D30206302A\
-:180018000010FDAFD300D301D30221000406FF3E55772310FA21000412\
-:1500300006FF1E557EBBC2400010F73E01D300763E01D30276EF\
+:0D00000000003E100610802101027776C935\
 :00000001FF\
 \0";
+
 
 #endif
 

@@ -28,7 +28,8 @@ it's possible assemble small programs using https://www.asm80.com/ and then past
 of the hex file into programFile.h::Z80_ROM char[]
 */
 
-#define DISABLE_SERIAL_OUTPUT
+//#define DISABLE_SERIAL_OUTPUT
+#define MAKE_ROM_AND_RAM_SMALL
 //#define DEBUG_RUN_SLOW
 //#define FULL_PRINT_DEBUG
 
@@ -37,8 +38,14 @@ of the hex file into programFile.h::Z80_ROM char[]
 #include "programFile.h"
 
 extern const char  ROM_image[];
-const int SIZE_OF_RAM = 2048;  // bytes
-//const int SIZE_OF_RAM = 512;  // bytes
+#ifdef MAKE_ROM_AND_RAM_SMALL
+  const int SIZE_OF_RAM = 32;  // bytes
+  const int SIZE_OF_ROM = 512;  // bytes
+#else
+  const int SIZE_OF_RAM = 2048;  // bytes
+  const int SIZE_OF_ROM = 1024;  // bytes
+#endif
+
 const int NUMBER_OF_IO_PORTS = 3;
 uint16_t addressBus = 0;
 uint8_t dataBus = 0;
@@ -80,7 +87,7 @@ bool refreshSet = false;
 bool busAckSet = false;
 bool resetSet = true;
 
-unsigned char Z80_RAM[SIZE_OF_RAM]; // 512 bytes of RAM should be plenty here :)
+unsigned char Z80_RAM[SIZE_OF_RAM+SIZE_OF_ROM]; // 512 bytes of RAM should be plenty here :)
 
 #ifdef DEBUG_RUN_SLOW
 const int HALF_CLOCK_RATE = 50;   // slow mode for DEBUG
@@ -138,7 +145,8 @@ void initialiseTest()
   pinMode(REFRESH, INPUT); 
   pinMode(IORQ, INPUT); 
   pinMode(HALT, INPUT);   
-  memset(Z80_RAM,0, sizeof(char) * SIZE_OF_RAM);
+  //memset(Z80_RAM+(SIZE_OF_ROM*sizeof(char)) ,0, sizeof(char) * SIZE_OF_RAM);
+  memset(Z80_RAM,0, sizeof(char) * (SIZE_OF_RAM + SIZE_OF_ROM));
   initialiseProgram();
   setAddressPinsToInput();
   setDataToInput();
@@ -351,7 +359,7 @@ void printMemory()
 {
   Serial.println();
   Serial.println("Memory contents");
-  for (int i = 0; i < SIZE_OF_RAM; i++)
+  for (int i = 0; i < SIZE_OF_RAM+SIZE_OF_ROM; i++)
   {
     if (i % 16 == 0) 
     {      
@@ -399,6 +407,20 @@ void loop()
 { 
   while(1)
   {
+    // check for halt from serial
+    if (Serial.available() > 0) 
+    {
+      int serialData;
+      serialData = Serial.read();
+
+      if (serialData == 'h')
+      {
+        Serial.println("got halt from user on serial");
+        printMemory();
+        Serial.flush();
+        sleep_mode();
+      }
+    }
     toggleClock();
     delay(HALF_CLOCK_RATE);
     toggleClock();
@@ -424,16 +446,19 @@ void loop()
 
     if ((readEn) && (memRequest) && (!refreshSet))
     {
-      if (addressBus < SIZE_OF_RAM)
+      if (addressBus < SIZE_OF_RAM+SIZE_OF_ROM)
       {
         dataBus = Z80_RAM[addressBus];
       }
       else
       {
-        Serial.println("SEG FAULT attempt to read off end of memory");
-        printMemory();
-        Serial.flush();
-        sleep_mode();
+        // this is no longer an error. In hardware it just doesn't exist.
+        // the memcheck.asm deliberately trys to write to the highest memory it can
+        // and then sets a variable for that top of ram - and relies on this not exiting early
+        //Serial.println("SEG FAULT attempt to read off end of memory");
+        //printMemory();
+        //Serial.flush();
+        //sleep_mode();
       }
       printStatus();
       printAddressAndDataBus(); 
@@ -444,16 +469,26 @@ void loop()
     {
       printStatus();
       dataBus = readFromDataPins();
-      if (addressBus < SIZE_OF_RAM)
+      if (addressBus < SIZE_OF_RAM+SIZE_OF_ROM)      
       {
-        Z80_RAM[addressBus] = dataBus;
+        if (addressBus >= SIZE_OF_ROM)
+        {
+          Z80_RAM[addressBus] = dataBus;
+        }
+        else
+        {
+          // this is not an error, just not possible to write to rom
+        }
       }
       else
       {
-        Serial.println("SEG FAULT attempt to read off end of memory");
-        printMemory();
-        Serial.flush();
-        sleep_mode();
+        // this is no longer an error. In hardware it just doesn't exist.
+        // the memcheck.asm deliberately trys to write to the highest memory it can
+        // and then sets a variable for that top of ram - and relies on this not exiting early
+        //Serial.println("SEG FAULT attempt to read off end of memory");
+        //printMemory();
+        //Serial.flush();
+        //sleep_mode();
       }      
       printAddressAndDataBus();
     }    
