@@ -28,9 +28,9 @@ it's possible assemble small programs using https://www.asm80.com/ and then past
 of the hex file into programFile.h::Z80_ROM char[]
 */
 
-//#define DISABLE_SERIAL_OUTPUT
-#define DEBUG_RUN_SLOW
-#define FULL_PRINT_DEBUG
+#define DISABLE_SERIAL_OUTPUT
+//#define DEBUG_RUN_SLOW
+//#define FULL_PRINT_DEBUG
 
 #include <avr/sleep.h>
 #include <stdio.h>
@@ -399,7 +399,6 @@ void loop()
 { 
   while(1)
   {
-    delay(HALF_CLOCK_RATE);
     toggleClock();
     delay(HALF_CLOCK_RATE);
     toggleClock();
