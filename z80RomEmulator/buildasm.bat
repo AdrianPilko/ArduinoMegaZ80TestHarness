@@ -5,7 +5,7 @@ del *.sym
 del *.hex
 del *.obj
 
-set "base_filename=memcheck"
+set "base_filename=byteForeverROM"
 
 call zxasm %base_filename%
 
