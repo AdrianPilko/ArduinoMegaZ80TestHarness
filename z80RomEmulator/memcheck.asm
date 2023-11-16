@@ -56,7 +56,17 @@ stackCheckLoop:
     jp runMonitor    
 
 runMonitor
-    ; not yet implemented
+    ; not yet implemented,   
+    xor a
+    out (0), a
+    out (1), a
+    out (2), a
+    
+    ld a, 1
+    out (0), a     ; output 1 to port zero (I have green connected)
+    xor a
+    out (0), a     ; output 1 to port zero (I have green connected)
+    jp runMonitor
     halt
     
 postFail
