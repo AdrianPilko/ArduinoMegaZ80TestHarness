@@ -5,9 +5,19 @@ del *.sym
 del *.hex
 del *.obj
 
-REM call zxasm flashled2
-REM call zxasm teststack
-call zxasm memcheck
-REM call zxasm memfill
-REM call zxasm flashled
-REM call zxasm add
+set "base_filename=memcheck"
+
+call zxasm %base_filename%
+
+REM Set the filename as a variable
+REM Example variable containing the base filename
+
+
+REM Concatenate the base filename with .obj to create a new filename
+set "new_filename=%base_filename%.obj"
+
+echo object filename: %new_filename%
+call addFormatForProgFile.bat %new_filename%
+
+
+pause

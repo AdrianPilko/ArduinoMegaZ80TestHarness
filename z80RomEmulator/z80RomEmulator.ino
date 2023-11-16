@@ -41,7 +41,7 @@ of the hex file into programFile.h::Z80_ROM char[]
 
 extern const char  ROM_image[];
 #ifdef MAKE_ROM_AND_RAM_SMALL
-  const int SIZE_OF_RAM = 32;  // bytes
+  const int SIZE_OF_RAM = 128;  // bytes
   const int SIZE_OF_ROM = 512;  // bytes
 #else
   const int SIZE_OF_RAM = 2048;  // bytes
@@ -298,9 +298,11 @@ void initialiseProgram()
   size_t lengthOfCurrentData = 0;
   size_t TotalLengthOfProgram = 0;
   const char * ptrToROM = ROM_image;
+  int lineNum = 0;
 
   while (arrayIndex < strlen(ROM_image))
   {
+    unsigned int checkSumThisLine = 0;
     // the data length field is 16 bits and low byte high byte  
     char tempDataLengthchars[3];  /// one extra for null terminator for strtol
     if (arrayIndex++);  // skip past the ":" at start of "line"
@@ -308,6 +310,8 @@ void initialiseProgram()
     tempDataLengthchars[1]=ptrToROM[arrayIndex++];
     tempDataLengthchars[2]='\0';
     size_t lengthOfData = (int)strtol(tempDataLengthchars, NULL, 16);
+
+    checkSumThisLine+=tempDataLengthchars;
 
     char tempAddresschars[5];  /// one extra for null terminator for strtol
     tempAddresschars[0]=ptrToROM[arrayIndex++]; 
@@ -317,11 +321,11 @@ void initialiseProgram()
     tempAddresschars[4]='\0';
     size_t addressToPutData = (int)strtol(tempAddresschars, NULL, 16);
     
+    checkSumThisLine+= addressToPutData;
+
     // next two chars not used on z80! so skip past
     arrayIndex++;
     arrayIndex++;
-
-
     
     Serial.print("lengthOfData=");
     Serial.println(lengthOfData, HEX);
@@ -335,6 +339,9 @@ void initialiseProgram()
       tempDatachars[1]=ptrToROM[arrayIndex++];
       tempDatachars[2]='\0';
       int theInstructionOrData = (int)strtol(tempDatachars, NULL, 16);
+
+      checkSumThisLine+= theInstructionOrData;
+
       if (addressToPutData < SIZE_OF_RAM+SIZE_OF_ROM)
       {
         Z80_RAM[addressToPutData] = theInstructionOrData;
@@ -360,8 +367,24 @@ void initialiseProgram()
     checksumchars[1]=ptrToROM[arrayIndex++];
     checksumchars[2]='\0';
     int checksum = (int)strtol(checksumchars, NULL, 16);
-    Serial.print("checksumchars=");
-    Serial.println(checksum,HEX);
+
+    uint8_t checkSumCheck = 0xFF - (checkSumThisLine & 0xFF);
+/* disable checksum check not working yet    
+    if (checkSumCheck != checksum)
+    {
+      Serial.print("checksum failed on line number (decimal) ");
+      Serial.println(lineNum);
+      Serial.print(" checksumchars=");
+      Serial.println(checksum,HEX);
+      Serial.print(" checkSumCheck=");      
+      Serial.println(checkSumCheck,HEX);
+      Serial.print(" checkSumThisLine=");
+      Serial.println(checkSumThisLine,HEX);            
+      Serial.flush();
+      sleep_mode();
+    }
+*/    
+    lineNum++;
   }
   Serial.println("ROM Image = ");
   Serial.println(ROM_image);
