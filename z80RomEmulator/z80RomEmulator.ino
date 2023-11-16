@@ -30,6 +30,8 @@ of the hex file into programFile.h::Z80_ROM char[]
 
 //#define DISABLE_SERIAL_OUTPUT
 #define MAKE_ROM_AND_RAM_SMALL
+//#define STOP_AFTER_PROGRAM_LOAD
+//#define FULL_DEBUG_INIT_PROGRAM
 //#define DEBUG_RUN_SLOW
 //#define FULL_PRINT_DEBUG
 
@@ -288,7 +290,7 @@ void initialiseProgram()
   //:090018003E00D30100000000C904
   //:00000001FF
   // https://en.wikipedia.org/wiki/SREC_(file_format)
-  //    16 bits(low byte high byte)    16 bits    "byte count number of bytes (2digit hex)"      ignore checksum(for now)
+  //    8 bits   16 bits (well max $ffff plus 1byte unused on z80)    "byte count number of bytes (2digit hex)"      ignore checksum(for now)
   //: Byte Count	Address   	Data	Checksum
   
 
@@ -300,22 +302,25 @@ void initialiseProgram()
   while (arrayIndex < strlen(ROM_image))
   {
     // the data length field is 16 bits and low byte high byte  
-    char tempDataLengthchars[5];  /// one extra for null terminator for strtol
+    char tempDataLengthchars[3];  /// one extra for null terminator for strtol
     if (arrayIndex++);  // skip past the ":" at start of "line"
-    tempDataLengthchars[2]=ptrToROM[arrayIndex++]; // ingore first char ":"
-    tempDataLengthchars[3]=ptrToROM[arrayIndex++];
-    tempDataLengthchars[0]=ptrToROM[arrayIndex++];
+    tempDataLengthchars[0]=ptrToROM[arrayIndex++]; // ingore first char ":"
     tempDataLengthchars[1]=ptrToROM[arrayIndex++];
-    tempDataLengthchars[4]='\0';
+    tempDataLengthchars[2]='\0';
     size_t lengthOfData = (int)strtol(tempDataLengthchars, NULL, 16);
 
     char tempAddresschars[5];  /// one extra for null terminator for strtol
-    tempAddresschars[2]=ptrToROM[arrayIndex++]; 
-    tempAddresschars[3]=ptrToROM[arrayIndex++];
-    tempAddresschars[0]=ptrToROM[arrayIndex++];
+    tempAddresschars[0]=ptrToROM[arrayIndex++]; 
     tempAddresschars[1]=ptrToROM[arrayIndex++];
+    tempAddresschars[2]=ptrToROM[arrayIndex++];
+    tempAddresschars[3]=ptrToROM[arrayIndex++];
     tempAddresschars[4]='\0';
     size_t addressToPutData = (int)strtol(tempAddresschars, NULL, 16);
+    
+    // next two chars not used on z80! so skip past
+    arrayIndex++;
+    arrayIndex++;
+
 
     
     Serial.print("lengthOfData=");
@@ -330,12 +335,26 @@ void initialiseProgram()
       tempDatachars[1]=ptrToROM[arrayIndex++];
       tempDatachars[2]='\0';
       int theInstructionOrData = (int)strtol(tempDatachars, NULL, 16);
+      if (addressToPutData < SIZE_OF_RAM+SIZE_OF_ROM)
+      {
+        Z80_RAM[addressToPutData] = theInstructionOrData;
+      }
+      else
+      {
+        Serial.print("INVALID ADDRESS: init program ");
+        Serial.print(addressToPutData);
+      }
 
-      Z80_RAM[addressToPutData] = theInstructionOrData;
+#ifdef FULL_DEBUG_INIT_PROGRAM
+      Serial.print("At Address=");
+      Serial.print(addressToPutData, HEX);
+      Serial.print(" data = ");
+      Serial.println(theInstructionOrData, HEX);
+#endif      
       addressToPutData++;
       TotalLengthOfProgram++;
     }
-    // after each data block there's a 2 hex digit checksum
+    // after each data block there's a 2 hex digit checksum (TODO implement checksum check!)
     char checksumchars[3];  /// one extra for null terminator for strtol
     checksumchars[0]=ptrToROM[arrayIndex++]; 
     checksumchars[1]=ptrToROM[arrayIndex++];
@@ -352,7 +371,11 @@ void initialiseProgram()
   Serial.print("loaded program ");
   Serial.print(TotalLengthOfProgram);
   Serial.println(" bytes long");
+  Serial.flush();
   delay(500);
+#ifdef STOP_AFTER_PROGRAM_LOAD  
+  sleep_mode();
+#endif  
 }
 
 void printMemory()
