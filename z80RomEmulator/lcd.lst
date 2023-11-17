@@ -1,0 +1,46 @@
+0001   0000             ; found this at bread80.com/2020/09/04/couch-to-64k-part3-adding-a-character-lcd-display-to-our-z880-breadboard-computer    
+0002   0000                 
+0003   0000             ;; LCD common IO port    
+0004   0000             #define lcd_command $00  
+0005   0000             ;; LCD data IO port
+0006   0000             #define lcd_data $01  
+0007   0000                 
+0008   0000                 .org 0
+0009   0000                 
+0010   0000 3E 3F           ld a, $3f ; function set: 8bit interface
+0011   0002 D3 00           out (lcd_command), a
+0012   0004 3E 0F           ld a,$0f    ; display on, cursor on
+0013   0006 D3 00           out (lcd_command), a
+0014   0008 3E 01           ld a, $01    ; clear display    
+0015   000A D3 00           out (lcd_command), a
+0016   000C 3E 06           ld a, $06    ; entry mode left to right, no shift
+0017   000E D3 00           out (lcd_command), a
+0018   0010 21 1D 00        ld hl, message
+0019   0013                 
+0020   0013             message_loop:    
+0021   0013 7E              ld a, (hl)
+0022   0014 A7              and a
+0023   0015 28 05           jr z, done
+0024   0017 D3 01           out (lcd_data), a
+0025   0019 23              inc hl
+0026   001A 18 F7           jr message_loop ; loop back for next character
+0027   001C             done:
+0028   001C 76              halt
+0029   001D             message:    
+0030   001D 3E 48 45 4C     .db ">HELLO< >DOCTOR< >NAME< >CONTINUE< >YESTERDAY< >TOMMOROW<",0
+0030   0021 4C 4F 3C 20 
+0030   0025 3E 44 4F 43 
+0030   0029 54 4F 52 3C 
+0030   002D 20 3E 4E 41 
+0030   0031 4D 45 3C 20 
+0030   0035 3E 43 4F 4E 
+0030   0039 54 49 4E 55 
+0030   003D 45 3C 20 3E 
+0030   0041 59 45 53 54 
+0030   0045 45 52 44 41 
+0030   0049 59 3C 20 3E 
+0030   004D 54 4F 4D 4D 
+0030   0051 4F 52 4F 57 
+0030   0055 3C 00 
+0031   0057             #END    
+tasm: Number of errors = 0
