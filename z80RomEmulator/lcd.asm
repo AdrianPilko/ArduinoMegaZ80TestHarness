@@ -1,31 +1,69 @@
-; found this at bread80.com/2020/09/04/couch-to-64k-part3-adding-a-character-lcd-display-to-our-z880-breadboard-computer    
-    
-;; LCD common IO port    
-#define lcd_command $00  
-;; LCD data IO port
-#define lcd_data $01  
+;
+; code from bread80.com didn't work because it relied on slow arduino clock
+; I've tried to correct this using delay loop to slow output down
+; still not sure if hardware is correct either
+; code made longer because my ram and rom select isn't working
+; only have rom, so can't use stack todo call returns
+;; LCD command port   
+#define comPort $00  
+;; LCD data port
+#define datPort $01  
     
     .org 0
     
-    ld a, $3f ; function set: 8bit interface
-    out (lcd_command), a
+    ld a, $3f ; 8bit interface
+    out (comPort), a
+    ld b, $ff   ; delay toop
+delay1:
+    ld a, $55   ; waste some clock cycles
+    add a, b
+    djnz delay1
+
     ld a,$0f    ; display on, cursor on
-    out (lcd_command), a
-    ld a, $01    ; clear display    
-    out (lcd_command), a
-    ld a, $06    ; entry mode left to right, no shift
-    out (lcd_command), a
-    ld hl, message
+    out (comPort), a
+
+    ld b, $ff   ; delay toop
+delay2:
+    ld a, $55   ; waste some clock cycles
+    add a, b
+    djnz delay2
+
+    ld a, $01    ; clear    
+    out (comPort), a
+
+    ld b, $ff   ; delay toop
+delay3:
+    ld a, $55   ; waste some clock cycles
+    add a, b
+    djnz delay3
+
+    ld a, $06    ; left to right
+    out (comPort), a
+
+    ld b, $ff   ; delay toop
+delay4:
+    ld a, $55   ; waste some clock cycles
+    add a, b
+    djnz delay4
+
+    ld hl, HELLO ; load address of first character in hello world
     
-message_loop:    
+writeTextLoop:    
     ld a, (hl)
-    and a
-    jr z, done
-    out (lcd_data), a
+    cp $ff
+    jp z, endProgram
+    out (datPort), a
     inc hl
-    jr message_loop ; loop back for next character
-done:
-    halt
-message:    
-    .db ">HELLO< >DOCTOR< >NAME< >CONTINUE< >YESTERDAY< >TOMMOROW<",0
+
+    ld b, $ff   ; delay toop
+delay5:
+    ld a, $55   ; waste some clock cycles
+    add a, b
+    djnz delay5
+
+    jr writeTextLoop
+endProgram:
+    halt   
+HELLO:    
+    .db "Hello, world",$ff
 #END    
