@@ -25,3 +25,10 @@ z80RomEmulator/eeprom.bin
 z80RomEmulator/simpleLoopForReal.txt
 z80RomEmulator/lcd.obj
 z80RomEmulator/lcd.lst
+z80RomEmulator/temp.txt
+z80RomEmulator/lcd.obj
+z80RomEmulator/lcd.lst
+z80RomEmulator/eeprom_data.bin
+z80RomEmulator/lcd.obj
+z80RomEmulator/lcd.lst
+z80RomEmulator/eeprom_data.bin

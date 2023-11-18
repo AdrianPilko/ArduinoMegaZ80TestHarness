@@ -22,65 +22,136 @@
 #define lcdRegisterSelectData $01
     
     .org 0
+ 
+delayLoop1:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop1 
     
-    ld a, $3f ; 8bit interface
-    out (lcdRegisterSelectCommand), a
-    ld b, $ff   ; delay loop
-delay1:
-    ld a, $55   ; waste some clock cycles
-    add a, b
-    djnz delay1
+    ld a, $38        ; function set: 8-bit mode, 2 lines, 5x8 font
+    out (lcdRegisterSelectCommand), a     ; send command to lcd (assuming lcd control port is at 0x00)
 
-    ld a,$0f    ; display on, cursor on
-    out (lcdRegisterSelectCommand), a
-
-    ld b, $ff   ; delay loop
-delay2:
-    ld a, $55   ; waste some clock cycles
-    add a, b
-    djnz delay2
-
-    ld a, $01    ; clear    
-    out (lcdRegisterSelectCommand), a
-    ;;;; debug not even seeing display clear
-    ;halt
-
-    ld b, $ff   ; delay loop
-delay3:
-    ld a, $55   ; waste some clock cycles
-    add a, b
-    djnz delay3
-
-    ld a, $06    ; left to right
-    out (lcdRegisterSelectCommand), a
-
-    ld b, $ff   ; delay loop
-delay4:
-    ld a, $55   ; waste some clock cycles
-    add a, b
-    djnz delay4
-
-    ld hl, HELLO ; load address of first character in hello world
+delayLoop2:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop2
     
-writeTextLoop:    
-    ld a, (hl)
-    cp $ff
-    jp z, endProgram
+    ld a, $0e        ; display on/off control: display on, cursor on, blink on
+    out (lcdRegisterSelectCommand), a     ; send command to lcd
+
+delayLoop3:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop3
+    
+    ld a, $01        ; clear display command
+    out (lcdRegisterSelectCommand), a     ; send command to lcd
+
+delayLoop4:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop4
+    
+    ld a, $06        ; entry mode set: increment cursor position, no display shift
+    out (lcdRegisterSelectCommand), a     ; send command to lcd
+
+delayLoop5:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop5
+    
+    ld a, 'H'
     out (lcdRegisterSelectData), a
-    inc hl
 
-    ld b, $ff   ; delay loop
-delay5:
-    ld a, $55   ; waste some clock cycles
-    add a, b
-    djnz delay5
+delayLoop6:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop6    
+    
+    ld a, 'E'
+    out (lcdRegisterSelectData), a
+    
+delayLoop7:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop7
+    
+    ld a, 'L'
+    out (lcdRegisterSelectData), a
 
-    jr writeTextLoop
+delayLoop8:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop8
+        
+    ld a, 'L'    
+    out (lcdRegisterSelectData), a    
 
-endProgram:
-    nop
-    jp endProgram
-    halt ; never gets here but 0x76 in assembly output easy to spot
-HELLO:    
-    .db "Hello, world",$ff
+delayLoop9:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop9
+        
+    ld a, 'O'    
+    out (lcdRegisterSelectData), a    
+
+delayLoop10:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop10
+        
+    ld a, ','    
+    out (lcdRegisterSelectData), a    
+
+delayLoop11:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop11
+        
+    ld a, 'W'    
+    out (lcdRegisterSelectData), a    
+
+delayLoop12:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop12
+        
+    ld a, 'O'    
+    out (lcdRegisterSelectData), a    
+
+delayLoop13:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop13
+        
+    ld a, 'R'    
+    out (lcdRegisterSelectData), a    
+
+delayLoop14:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop14
+        
+    ld a, 'L'    
+    out (lcdRegisterSelectData), a    
+
+delayLoop15:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop15
+        
+    ld a, 'D'    
+    out (lcdRegisterSelectData), a    
+        
+delayLoop16:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,delayLoop16
+        
+    ld a, '!'    
+    out (lcdRegisterSelectData), a    
+            
+    
+    halt
+
 #END    
