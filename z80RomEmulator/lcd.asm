@@ -2,17 +2,16 @@
 ; code from bread80.com didn't work because it relied on slow arduino clock
 ; I've tried to correct this using delay loop to slow output down
 ; still not sure if hardware is correct either
-; code made longer because my ram and rom select isn't working
+; also there is only on lcd display port
+;code made longer because my ram and rom select isn't working
 ; only have rom, so can't use stack todo call returns
-;; LCD command port   
-#define comPort $00  
-;; LCD data port
-#define datPort $01  
+;; lcd port, is only one output port for lcd
+#define lcdPort $00
     
     .org 0
     
     ld a, $3f ; 8bit interface
-    out (comPort), a
+    out (lcdPort), a
     ld b, $ff   ; delay toop
 delay1:
     ld a, $55   ; waste some clock cycles
@@ -20,7 +19,7 @@ delay1:
     djnz delay1
 
     ld a,$0f    ; display on, cursor on
-    out (comPort), a
+    out (lcdPort), a
 
     ld b, $ff   ; delay toop
 delay2:
@@ -29,7 +28,7 @@ delay2:
     djnz delay2
 
     ld a, $01    ; clear    
-    out (comPort), a
+    out (lcdPort), a
 
     ld b, $ff   ; delay toop
 delay3:
@@ -38,7 +37,7 @@ delay3:
     djnz delay3
 
     ld a, $06    ; left to right
-    out (comPort), a
+    out (lcdPort), a
 
     ld b, $ff   ; delay toop
 delay4:
@@ -52,7 +51,7 @@ writeTextLoop:
     ld a, (hl)
     cp $ff
     jp z, endProgram
-    out (datPort), a
+    out (lcdPort), a
     inc hl
 
     ld b, $ff   ; delay toop
@@ -62,8 +61,10 @@ delay5:
     djnz delay5
 
     jr writeTextLoop
+
 endProgram:
     halt   
+
 HELLO:    
     .db "Hello, world",$ff
 #END    
