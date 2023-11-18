@@ -18,3 +18,10 @@ z80RomEmulator/byteForeverROM.txt
 z80RomEmulator/byteForeverROM.obj
 z80RomEmulator/byteForeverROM.lst
 z80RomEmulator/lcd.txt
+z80RomEmulator/lcd.obj
+z80RomEmulator/lcd.lst
+z80RomEmulator/lcd.bin
+z80RomEmulator/eeprom.bin
+z80RomEmulator/simpleLoopForReal.txt
+z80RomEmulator/lcd.obj
+z80RomEmulator/lcd.lst

@@ -5,7 +5,7 @@ del *.sym
 del *.hex
 del *.obj
 
-set "base_filename=lcd"
+set "base_filename=simpleLoopForReal"
 
 call zxasm %base_filename%
 
