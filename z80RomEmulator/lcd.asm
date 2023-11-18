@@ -23,135 +23,35 @@
     
     .org 0
  
+    ld hl,InitCommandList
 delayLoop1:         
     in a,(lcdRegisterSelectCommand)  
     rlca              
     jr c,delayLoop1 
-    
-    ld a, $38        ; function set: 8-bit mode, 2 lines, 5x8 font
+    ld a, (hl)
+    cp $ff
+    jp z, startOutChars
     out (lcdRegisterSelectCommand), a     ; send command to lcd (assuming lcd control port is at 0x00)
+    inc hl
+    jp delayLoop1
 
+startOutChars:
+    ld hl, BootMessage
 delayLoop2:         
     in a,(lcdRegisterSelectCommand)  
     rlca              
     jr c,delayLoop2
     
-    ld a, $0e        ; display on/off control: display on, cursor on, blink on
-    out (lcdRegisterSelectCommand), a     ; send command to lcd
-
-delayLoop3:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop3
-    
-    ld a, $01        ; clear display command
-    out (lcdRegisterSelectCommand), a     ; send command to lcd
-
-delayLoop4:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop4
-    
-    ld a, $06        ; entry mode set: increment cursor position, no display shift
-    out (lcdRegisterSelectCommand), a     ; send command to lcd
-
-delayLoop5:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop5
-    
-    ld a, 'H'
+    ld a, (hl)
+    cp $ff
+    jp z, afterDisplayText
     out (lcdRegisterSelectData), a
-
-delayLoop6:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop6    
-    
-    ld a, 'E'
-    out (lcdRegisterSelectData), a
-    
-delayLoop7:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop7
-    
-    ld a, 'L'
-    out (lcdRegisterSelectData), a
-
-delayLoop8:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop8
-        
-    ld a, 'L'    
-    out (lcdRegisterSelectData), a    
-
-delayLoop9:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop9
-        
-    ld a, 'O'    
-    out (lcdRegisterSelectData), a    
-
-delayLoop10:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop10
-        
-    ld a, ','    
-    out (lcdRegisterSelectData), a    
-
-delayLoop11:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop11
-        
-    ld a, 'W'    
-    out (lcdRegisterSelectData), a    
-
-delayLoop12:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop12
-        
-    ld a, 'O'    
-    out (lcdRegisterSelectData), a    
-
-delayLoop13:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop13
-        
-    ld a, 'R'    
-    out (lcdRegisterSelectData), a    
-
-delayLoop14:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop14
-        
-    ld a, 'L'    
-    out (lcdRegisterSelectData), a    
-
-delayLoop15:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop15
-        
-    ld a, 'D'    
-    out (lcdRegisterSelectData), a    
-        
-delayLoop16:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop16
-        
-    ld a, '!'    
-    out (lcdRegisterSelectData), a    
-            
-    
+    inc hl
+    jp delayLoop2
+afterDisplayText:
     halt
-
+InitCommandList:
+    .db $38,$0e,$01,$06,$ff
+BootMessage:
+    .db 'Z80..byteForever',$ff
 #END    
