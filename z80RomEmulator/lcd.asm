@@ -50,6 +50,8 @@ delayLoop2:
     jp delayLoop2
 afterDisplayText:
 
+    ld a,$c0        ; Set DDRAM address to start of the second line (0x40)
+    out (lcdRegisterSelectCommand), a     ; Send command to LCD     
     ld hl, additionText
 delayLoop3:
     ; have some "fun" and add two numbers then display on lcd
@@ -65,24 +67,25 @@ delayLoop3:
     jp delayLoop3
 
 displayResult:
-delayLoop4:
-    ; have some "fun" and add two numbers then display on lcd
+delayLoop4:   
     in a,(lcdRegisterSelectCommand)
     rlca
     jr c,delayLoop4
+    
+     ; have some "fun" and add two numbers then display on lcd
 
     ld a, 2
     ld b, 2
-    add b 
-    ld b, $30   ; to convert to ascii 
-    add b
+    add a, b 
+    ld b, $30   ; to convert to ascii, so even though we're only adding 2+2 need another add
+    add a, b
     out (lcdRegisterSelectData), a
 
     halt
 InitCommandList:
     .db $38,$0e,$01,$06,$ff
 BootMessage:
-    .db 'Z80..byteForever',$ff
+    .db "Z80 byteForever",$ff
 additionText:
-    .db '2+2= ',$ff
+    .db "2+2= ",$ff
 #END    
