@@ -49,9 +49,40 @@ delayLoop2:
     inc hl
     jp delayLoop2
 afterDisplayText:
+
+    ld hl, additionText
+delayLoop3:
+    ; have some "fun" and add two numbers then display on lcd
+    in a,(lcdRegisterSelectCommand)
+    rlca
+    jr c,delayLoop3
+
+    ld a, (hl)
+    cp $ff
+    jp z, displayResult
+    out (lcdRegisterSelectData), a
+    inc hl
+    jp delayLoop3
+
+displayResult:
+delayLoop4:
+    ; have some "fun" and add two numbers then display on lcd
+    in a,(lcdRegisterSelectCommand)
+    rlca
+    jr c,delayLoop4
+
+    ld a, 2
+    ld b, 2
+    add b 
+    ld b, $30   ; to convert to ascii 
+    add b
+    out (lcdRegisterSelectData), a
+
     halt
 InitCommandList:
     .db $38,$0e,$01,$06,$ff
 BootMessage:
     .db 'Z80..byteForever',$ff
+additionText:
+    .db '2+2= ',$ff
 #END    
