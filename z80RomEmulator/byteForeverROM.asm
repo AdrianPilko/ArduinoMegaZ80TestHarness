@@ -2,16 +2,44 @@
 ;;; low  1024 bytes $0000 to $03ff are rom
 ;;; high 1024 bytes $0400 to $07ff are RAM
 ;;; does not set stack pointer, previous tests should not working properly yet
-#define ROM_SIZE $0200
+#define ROM_SIZE $8000
 #define SIZE_OF_SYSTEM_VARIABLES $0004
 #define STACK_SIZE_BYTES $0008
 #define STACK_BOTTOM $0010+ROM_SIZE+SIZE_OF_SYSTEM_VARIABLES
-#define RAM_SIZE $0080   ;;; this will be checked
+#define RAM_SIZE $8000   ;;; this will be checked
     
     ;;; initialise LEDs on port zero and one to be off
     .org $0
+    
+    
+#define lcdRegisterSelectCommand $00
+#define lcdRegisterSelectData $01
+
     ld  sp , STACK_BOTTOM 
-    ld hl, STACK_BOTTOM   ; start of ram at $200 for small ram in emulator
+   
+    ld hl,InitCommandList
+    call waitLCD
+loopLCDInitCommands
+    ld a, (hl)
+    cp $ff
+    jp z, startOutChars
+    out (lcdRegisterSelectCommand), a     ; send command to lcd (assuming lcd control port is at 0x00)
+    inc hl
+    jp loopLCDInitCommands
+    
+startOutChars:
+    ld hl, BootMessage
+loopLCDBootMessage:         
+    call waitLCD 
+    ld a, (hl)
+    cp $ff
+    jp z, memFillAndCheck
+    out (lcdRegisterSelectData), a
+    inc hl
+    jp loopLCDBootMessage    
+
+
+    ld hl, STACK_BOTTOM   ; start of ram at $200 for small ram in emulator    
     ld e, $55       ; fill all memory with $55 = 1010101
 memFillAndCheck:
     ld a, e   
@@ -49,9 +77,35 @@ stackCheckLoop:
     ;; as in memory it's low byte high byte, reverse $EFBE = pass $ADFB = fail
     ld hl, $EFBE 
     ld (POST_RESULT), hl
-    jp runMonitor    
 
-runMonitor:
+   
+afterDisplayText:
+    ld a,$c0        ; Set DDRAM address to start of the second line (0x40)
+    out (lcdRegisterSelectCommand), a     ; Send command to LCD     
+    ld hl, memcheckResultText
+displayLCDMemCheckResultText:
+    call waitLCD 
+    ld a, (hl)
+    cp $ff
+    jp z, displayResult
+    out (lcdRegisterSelectData), a
+    inc hl
+    jp displayLCDMemCheckResultText
+
+displayResult:
+    call waitLCD    
+    ld hl, (RAM_MAX_VAR)
+    ld a, h       
+    ld b, $30   ; to convert to ascii, so even though we're only adding 2+2 need another add
+    add a, b
+    out (lcdRegisterSelectData), a
+    call waitLCD
+    ld a, l
+    ld b, $30   ; to convert to ascii, so even though we're only adding 2+2 need another add
+    add a, b
+    out (lcdRegisterSelectData), a      
+
+runMonitor:   
     ;; machine code monitor :::: TODO!
     
     ;; initialise and clear display on port 0
@@ -80,10 +134,25 @@ postFail
     ld hl, $ADFB
     ld (POST_RESULT), hl    
     halt
+
+waitLCD:    
+waitForLCDLoop:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,waitForLCDLoop
+    ret 
+    
+    
     .org ROM_SIZE  
 RAM_MAX_VAR:
     .dw $ffff
 POST_RESULT:    
     .dw $ffff    
+InitCommandList:
+    .db $38,$0e,$01,$06,$ff
+BootMessage:
+    .db "Z80 byteForever",$ff
+memcheckResultText:
+    .db "Memcheck=",$ff    
 #END
 

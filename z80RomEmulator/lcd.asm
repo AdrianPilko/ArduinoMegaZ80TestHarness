@@ -20,72 +20,76 @@
 
 #define lcdRegisterSelectCommand $00
 #define lcdRegisterSelectData $01
+
+#define ROM_SIZE $8000
+#define SIZE_OF_SYSTEM_VARIABLES $0004
+#define STACK_SIZE_BYTES $0008
+#define STACK_BOTTOM $0010+ROM_SIZE+SIZE_OF_SYSTEM_VARIABLES
+#define RAM_SIZE $8000   ;;; this will be checked
     
     .org 0
- 
+    ld  sp , STACK_BOTTOM 
+    
+    
     ld hl,InitCommandList
-delayLoop1:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop1 
+    call waitLCD
+loopLCDInitCommands
     ld a, (hl)
     cp $ff
     jp z, startOutChars
     out (lcdRegisterSelectCommand), a     ; send command to lcd (assuming lcd control port is at 0x00)
     inc hl
-    jp delayLoop1
+    jp loopLCDInitCommands
 
 startOutChars:
     ld hl, BootMessage
-delayLoop2:         
-    in a,(lcdRegisterSelectCommand)  
-    rlca              
-    jr c,delayLoop2
-    
+loopLCDBootMessage:         
+    call waitLCD 
     ld a, (hl)
     cp $ff
     jp z, afterDisplayText
     out (lcdRegisterSelectData), a
     inc hl
-    jp delayLoop2
+    jp loopLCDBootMessage
+    
 afterDisplayText:
 
     ld a,$c0        ; Set DDRAM address to start of the second line (0x40)
     out (lcdRegisterSelectCommand), a     ; Send command to LCD     
-    ld hl, additionText
-delayLoop3:
-    ; have some "fun" and add two numbers then display on lcd
-    in a,(lcdRegisterSelectCommand)
-    rlca
-    jr c,delayLoop3
-
+    ld hl, memcheckResultText
+displayLCDMemCheckResultText:
+    call waitLCD 
     ld a, (hl)
     cp $ff
     jp z, displayResult
     out (lcdRegisterSelectData), a
     inc hl
-    jp delayLoop3
+    jp displayLCDMemCheckResultText
 
 displayResult:
-delayLoop4:   
-    in a,(lcdRegisterSelectCommand)
-    rlca
-    jr c,delayLoop4
+    call waitLCD    
     
-     ; have some "fun" and add two numbers then display on lcd
-
-    ld a, 2
-    ld b, 2
-    add a, b 
-    ld b, $30   ; to convert to ascii, so even though we're only adding 2+2 need another add
+    ;write $55 to RAM then read back
+    ld a, 5
+    ld (STACK_BOTTOM), a   
+    ld a, (STACK_BOTTOM)  
+    ld b, $30   ; to convert to ascii, needs more to do 2 digits (isolat high nibble then low)
     add a, b
     out (lcdRegisterSelectData), a
 
     halt
+
+waitLCD:    
+waitForLCDLoop:         
+    in a,(lcdRegisterSelectCommand)  
+    rlca              
+    jr c,waitForLCDLoop
+    ret 
+    
 InitCommandList:
     .db $38,$0e,$01,$06,$ff
 BootMessage:
     .db "Z80 byteForever",$ff
-additionText:
-    .db "2+2= ",$ff
+memcheckResultText:
+    .db "Memcheck=",$ff
 #END    

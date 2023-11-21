@@ -9,15 +9,7 @@ set "base_filename=byteForeverROM"
 
 call zxasm %base_filename%
 
-REM Set the filename as a variable
-REM Example variable containing the base filename
 
-
-REM Concatenate the base filename with .obj to create a new filename
-set "new_filename=%base_filename%.obj"
-
-echo object filename: %new_filename%
-call addFormatForProgFile.bat %new_filename%
-
+call python convertOBJToBIN.py ./byteForeverROM.obj
 
 pause
