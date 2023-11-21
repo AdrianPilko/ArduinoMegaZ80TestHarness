@@ -2,7 +2,7 @@
 ;;; memory model:
 ;;; 0x0000 to 7fff      - ROM
 ;;; 0x8000 to to 0xffff - RAM
-;;; does not set stack pointer, previous tests should not working properly yet
+;;; 
 #define ROM_SIZE $7fff
 #define SIZE_OF_SYSTEM_VARIABLES $0004
 #define STACK_SIZE_BYTES $001f
