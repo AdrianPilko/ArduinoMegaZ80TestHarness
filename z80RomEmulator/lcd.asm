@@ -69,7 +69,7 @@ displayLCDMemCheckResultText:
 displayResult:
     call waitLCD    
     
-    ;write $55 to RAM then read back
+    ;write $5 to RAM then read back
     ld a, 5
     ld (STACK_BOTTOM), a   
     ld a, (STACK_BOTTOM)  

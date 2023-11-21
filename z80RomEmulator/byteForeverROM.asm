@@ -1,45 +1,23 @@
-;;; assume we have memory model as such
-;;; low  1024 bytes $0000 to $03ff are rom
-;;; high 1024 bytes $0400 to $07ff are RAM
+
+;;; memory model:
+;;; 0x0000 to 7fff      - ROM
+;;; 0x8000 to to 0xffff - RAM
 ;;; does not set stack pointer, previous tests should not working properly yet
-#define ROM_SIZE $8000
+#define ROM_SIZE $7fff
 #define SIZE_OF_SYSTEM_VARIABLES $0004
-#define STACK_SIZE_BYTES $0008
+#define STACK_SIZE_BYTES $001f
 #define STACK_BOTTOM $0010+ROM_SIZE+SIZE_OF_SYSTEM_VARIABLES
-#define RAM_SIZE $8000   ;;; this will be checked
-    
-    ;;; initialise LEDs on port zero and one to be off
+#define RAM_START STACK_BOTTOM  
+
+#define lcdRegisterSelectCommand $00
+#define lcdRegisterSelectData $01    
+
     .org $0
     
-    
-#define lcdRegisterSelectCommand $00
-#define lcdRegisterSelectData $01
-
     ld  sp , STACK_BOTTOM 
-   
-    ld hl,InitCommandList
-    call waitLCD
-loopLCDInitCommands
-    ld a, (hl)
-    cp $ff
-    jp z, startOutChars
-    out (lcdRegisterSelectCommand), a     ; send command to lcd (assuming lcd control port is at 0x00)
-    inc hl
-    jp loopLCDInitCommands
     
-startOutChars:
-    ld hl, BootMessage
-loopLCDBootMessage:         
-    call waitLCD 
-    ld a, (hl)
-    cp $ff
-    jp z, memFillAndCheck
-    out (lcdRegisterSelectData), a
-    inc hl
-    jp loopLCDBootMessage    
-
-
-    ld hl, STACK_BOTTOM   ; start of ram at $200 for small ram in emulator    
+    call initialiseLCD
+    ld hl, RAM_START
     ld e, $55       ; fill all memory with $55 = 1010101
 memFillAndCheck:
     ld a, e   
@@ -55,56 +33,9 @@ memFillAndCheck:
 endMemCheck:
     ;; write the value of hl to memory location $201
     ld (RAM_MAX_VAR), hl
-
-    ;; test the stack
-    ld b, STACK_SIZE_BYTES    
-stackPushCheckLoop:         
-    ld hl, $ffff
-    push hl
-    djnz stackPushCheckLoop
+    call setLCDRow2
+    call printMemcheckResult     
     
-    ld b, STACK_SIZE_BYTES
-stackCheckLoop:    
-    pop hl    
-    ld a, $ff       
-    cp h
-    jp nz, postFail
-    cp l
-    jp nz, postFail    
-    djnz stackCheckLoop
-    
-    ;;; also write post result to POST_RESULT $BEEF = pass $FBAD = fail
-    ;; as in memory it's low byte high byte, reverse $EFBE = pass $ADFB = fail
-    ld hl, $EFBE 
-    ld (POST_RESULT), hl
-
-   
-afterDisplayText:
-    ld a,$c0        ; Set DDRAM address to start of the second line (0x40)
-    out (lcdRegisterSelectCommand), a     ; Send command to LCD     
-    ld hl, memcheckResultText
-displayLCDMemCheckResultText:
-    call waitLCD 
-    ld a, (hl)
-    cp $ff
-    jp z, displayResult
-    out (lcdRegisterSelectData), a
-    inc hl
-    jp displayLCDMemCheckResultText
-
-displayResult:
-    call waitLCD    
-    ld hl, (RAM_MAX_VAR)
-    ld a, h       
-    ld b, $30   ; to convert to ascii, so even though we're only adding 2+2 need another add
-    add a, b
-    out (lcdRegisterSelectData), a
-    call waitLCD
-    ld a, l
-    ld b, $30   ; to convert to ascii, so even though we're only adding 2+2 need another add
-    add a, b
-    out (lcdRegisterSelectData), a      
-
 runMonitor:   
     ;; machine code monitor :::: TODO!
     
@@ -116,11 +47,9 @@ mainMonitoLoop:
     ; echo the character to the display
     
     ; if character is "S" - show memory
-    call getAddress_ResHL    
-    ; hl now contains the value read from keypad for start address,
-    
-    
-    call getAddress_ResHL
+    ;call getAddress_ResHL    
+    ; hl now contains the value read from keypad for start address,    
+    ;call getAddress_ResHL
     jp mainMonitoLoop
     
     halt
@@ -135,24 +64,117 @@ postFail
     ld (POST_RESULT), hl    
     halt
 
-waitLCD:    
+initialiseLCD:
+    ld hl,InitCommandList
+    call waitLCD
+loopLCDInitCommands
+    ld a, (hl)
+    cp $ff
+    jp z, outputBootMessage
+    out (lcdRegisterSelectCommand), a     ; send command to lcd (assuming lcd control port is at 0x00)
+    inc hl
+    jp loopLCDInitCommands
+    
+outputBootMessage:
+    ld hl, BootMessage
+loopLCDBootMessage:         
+    call waitLCD 
+    ld a, (hl)
+    cp $ff
+    jp z, initialiseLCD_ret
+    out (lcdRegisterSelectData), a
+    inc hl
+    jp loopLCDBootMessage    
+initialiseLCD_ret    
+    ret
+    
+setLCDRow2:
+    call waitLCD
+    ld a,$c0        ; Set DDRAM address to start of the second line (0x40)
+    out (lcdRegisterSelectCommand), a     ; Send command to LCD         
+    ret 
+
+printMemcheckResult:    
+    ld hl, memcheckResultText    
+displayLCDMemCheckResultText:
+    call waitLCD 
+    ld a, (hl)
+    cp $ff
+    jp z, displayResult
+    out (lcdRegisterSelectData), a
+    inc hl
+    jp displayLCDMemCheckResultText
+    
+displayResult:
+    call waitLCD    
+    ld hl, (RAM_MAX_VAR)
+    ld (to_print), hl
+    call hprint16    
+    call waitLCD 
+    ld a, 'h'    
+    out (lcdRegisterSelectData), a
+    ret
+    
+
+waitLCD:
+    push af    
 waitForLCDLoop:         
     in a,(lcdRegisterSelectCommand)  
     rlca              
     jr c,waitForLCDLoop
+    pop af
     ret 
     
+hprint16  ; print one 2byte number stored in location $to_print modified from hprint http://swensont.epizy.com/ZX81Assembly.pdf?i=1
+	;ld hl,$to_print
+	ld hl,$to_print+$01	
+	ld b,2	
+hprint16_loop	
+	ld a, (hl)
+	push af ;store the original value of a for later
+	and $f0 ; isolate the first digit
+	rrca
+	rrca
+	rrca
+	rrca
+    call ConvertToASCII
+    call waitLCD    
+	out (lcdRegisterSelectData), a
+	pop af ; retrieve original value of a
+	and $0f ; isolate the second digit
+    call ConvertToASCII
+    call waitLCD    
+	out (lcdRegisterSelectData), a
+	dec hl
+	djnz hprint16_loop
+	; restore registers
+	ret	  
+
+ConvertToASCII:
+    ; assuming the value in register a (0-15) to be converted to ascii
+    ; convert the value to its ascii representation
+    add a, '0'       ; convert value to ascii character
+    cp  '9'          ; compare with ascii '9'
+    jr  nc, ConvertToASCII_ret     ; jump if the value is not between 0-9
+    add a, 7         ; if greater than '9', adjust to ascii a-f
+ConvertToASCII_ret:
+    ret              ; return from subroutine
     
-    .org ROM_SIZE  
-RAM_MAX_VAR:
-    .dw $ffff
-POST_RESULT:    
-    .dw $ffff    
+;;; rom "constants"
 InitCommandList:
     .db $38,$0e,$01,$06,$ff
 BootMessage:
     .db "Z80 byteForever",$ff
 memcheckResultText:
     .db "Memcheck=",$ff    
+    
+;;; ram variables    
+    .org STACK_BOTTOM
+RAM_MAX_VAR:
+    .dw $ffff
+POST_RESULT:    
+    .dw $ffff    
+to_print:
+    .dw $0000
 #END
 
