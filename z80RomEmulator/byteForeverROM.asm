@@ -8,8 +8,10 @@
 #define STACK_BOTTOM $ffff
 #define RAM_START $8000  
 
-#define lcdRegisterSelectCommand $00
-#define lcdRegisterSelectData $01    
+;; port definitions
+#define lcdRegisterSelectCommand $00   ; all zero address including line 0 which is connected to the LCD  ReadSelect (RS) pin 
+#define lcdRegisterSelectData $01      ; all zero address except line 0 which is connected to the LCD  ReadSelect (RS) pin 
+#define keypadInOutPort $20             ; A6 high the rest low
 
     .org $0
     
@@ -44,27 +46,39 @@ runMonitor:
     ;; output the prompt - use ">"
 mainMonitoLoop:
     ;read character from keypad - which is on port 1
-    
+    ; this involves scanning the rows, then reading the columns for a 1 set
+    ; we have a 4 * 4 key pad
+    ;  7 8 9 A     
+    ;  4 5 6 B
+    ;  1 2 3 C
+    ;  R F E D      ; the hex numbers are as normal and R represents return/enter in the monitor
+    ;
+    ;
+    ld b, 4
+keypadScanLoop:    
+    ld a, b
+    out (keypadInOutPort), a    ; put row count out on the keypad port
+    in a, (keypadInOutPort)     ; immediately read back in
+    cp 1
+    jp z, keyFoundinRegA
+    djnz keypadScanLoop
+    jp noKeyPressed
+keyFoundinRegA:      
     ; echo the character to the display
+    call hexprint8
     
-    ; if character is "S" - show memory
-    ;call getAddress_ResHL    
-    ; hl now contains the value read from keypad for start address,    
-    ;call getAddress_ResHL
+    ; todo
+    
+    ; if first number entered, 
+    ;      0 = display ram next 4 digits are address when R pressed next will execute
+    ;      1 = enter address 4 digits are address R pressed next will execute
+    ;      2 = enter data at current address, 4 digits are address R pressed next will execute
+    
+noKeyPressed:    
     jp mainMonitoLoop
     
     halt
-
-getAddress_ResHL:
-    ;; todo for now just return with hl = value read from keypad
-    ld hl, $0000
-    ret
-    
-postFail
-    ld hl, $ADFB
-    ld (POST_RESULT), hl    
-    halt
-
+  
 initialiseLCD:
     ld hl,InitCommandList
     call waitLCD
@@ -110,7 +124,7 @@ displayResult:
     call waitLCD    
     ld hl, (RAM_MAX_VAR)
     ld (to_print), hl
-    call hprint16    
+    call hexprint16    
     call waitLCD 
     ld a, 'h'    
     out (lcdRegisterSelectData), a
@@ -124,13 +138,13 @@ waitForLCDLoop:
     jr c,waitForLCDLoop    
     ret 
     
-hprint16  ; print one 2byte number stored in location $to_print modified from hprint http://swensont.epizy.com/ZX81Assembly.pdf?i=1
+hexprint16  ; print one 2byte number stored in location $to_print modified from hprint http://swensont.epizy.com/ZX81Assembly.pdf?i=1
 	;ld hl,$ffff  ; debug check conversion to ascii
     ;ld ($to_print), hl
     
 	ld hl,$to_print+$01	
 	ld b,2	
-hprint16_loop	
+hexprint16_loop	
     call waitLCD    
 	ld a, (hl)
 	push af ;store the original value of a for later
@@ -147,8 +161,27 @@ hprint16_loop
     call ConvertToASCII       
 	out (lcdRegisterSelectData), a
 	dec hl
-	djnz hprint16_loop
+	djnz hexprint16_loop
 	ret	  
+
+hexprint8 		
+	push af ;store the original value of a for later
+    call waitLCD 
+    pop af
+    push af ;store the original value of a for later
+	and $f0 ; isolate the first digit    
+	rrca
+	rrca
+	rrca
+	rrca  
+    call ConvertToASCII
+	out (lcdRegisterSelectData), a
+    call waitLCD 
+	pop af ; retrieve original value of a
+	and $0f ; isolate the second digit
+    call ConvertToASCII       
+	out (lcdRegisterSelectData), a
+	ret
 
 ConvertToASCII:
     ; assuming the value in register a (0-15) to be converted to ascii
