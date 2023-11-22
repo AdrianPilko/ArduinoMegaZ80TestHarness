@@ -5,9 +5,8 @@
 ;;; 
 #define ROM_SIZE $7fff
 #define SIZE_OF_SYSTEM_VARIABLES $0004
-#define STACK_SIZE_BYTES $001f
-#define STACK_BOTTOM $0010+ROM_SIZE+SIZE_OF_SYSTEM_VARIABLES
-#define RAM_START STACK_BOTTOM  
+#define STACK_BOTTOM $ffff
+#define RAM_START $8000  
 
 #define lcdRegisterSelectCommand $00
 #define lcdRegisterSelectData $01    
@@ -17,7 +16,7 @@
     ld  sp , STACK_BOTTOM 
     
     call initialiseLCD
-    ld hl, RAM_START
+    ld hl, RAM_START   ; this will overwrite srtack but is ok because nothing on it at the moment!
     ld e, $55       ; fill all memory with $55 = 1010101
 memFillAndCheck:
     ld a, e   
@@ -31,6 +30,8 @@ memFillAndCheck:
     halt
      
 endMemCheck:
+    dec hl   ; dec by one as check tested location+1
+    ld  sp , STACK_BOTTOM 
     ;; write the value of hl to memory location $201
     ld (RAM_MAX_VAR), hl
     call setLCDRow2
@@ -116,48 +117,50 @@ displayResult:
     ret
     
 
-waitLCD:
-    push af    
+waitLCD:    
 waitForLCDLoop:         
     in a,(lcdRegisterSelectCommand)  
     rlca              
-    jr c,waitForLCDLoop
-    pop af
+    jr c,waitForLCDLoop    
     ret 
     
 hprint16  ; print one 2byte number stored in location $to_print modified from hprint http://swensont.epizy.com/ZX81Assembly.pdf?i=1
-	;ld hl,$to_print
+	;ld hl,$ffff  ; debug check conversion to ascii
+    ;ld ($to_print), hl
+    
 	ld hl,$to_print+$01	
 	ld b,2	
 hprint16_loop	
+    call waitLCD    
 	ld a, (hl)
 	push af ;store the original value of a for later
 	and $f0 ; isolate the first digit
 	rrca
 	rrca
 	rrca
-	rrca
+	rrca        
     call ConvertToASCII
-    call waitLCD    
 	out (lcdRegisterSelectData), a
+    call waitLCD 
 	pop af ; retrieve original value of a
 	and $0f ; isolate the second digit
-    call ConvertToASCII
-    call waitLCD    
+    call ConvertToASCII       
 	out (lcdRegisterSelectData), a
 	dec hl
 	djnz hprint16_loop
-	; restore registers
 	ret	  
 
 ConvertToASCII:
     ; assuming the value in register a (0-15) to be converted to ascii
     ; convert the value to its ascii representation
     add a, '0'       ; convert value to ascii character
-    cp  '9'          ; compare with ascii '9'
-    jr  nc, ConvertToASCII_ret     ; jump if the value is not between 0-9
-    add a, 7         ; if greater than '9', adjust to ascii a-f
+    cp  '9'        ; compare with ascii '9'
+    jr  nc, ConvertToASCIIdoAdd     ; jump if the value is not between 0-9
+    jp ConvertToASCII_ret
+ConvertToASCIIdoAdd:    
+    add a, 7     ; if greater than '9', adjust to ascii a-f
 ConvertToASCII_ret:
+        
     ret              ; return from subroutine
     
 ;;; rom "constants"
@@ -169,7 +172,7 @@ memcheckResultText:
     .db "Memcheck=",$ff    
     
 ;;; ram variables    
-    .org STACK_BOTTOM
+    .org RAM_START
 RAM_MAX_VAR:
     .dw $ffff
 POST_RESULT:    

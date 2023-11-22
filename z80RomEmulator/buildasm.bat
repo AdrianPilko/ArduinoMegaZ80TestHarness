@@ -11,5 +11,3 @@ call zxasm %base_filename%
 
 
 call python convertOBJToBIN.py ./byteForeverROM.obj
-
-pause
