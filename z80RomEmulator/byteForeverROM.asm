@@ -45,6 +45,9 @@ runMonitor:
     ;; initialise and clear display on port 0
     ;; output the prompt - use ">"
 mainMonitoLoop:
+
+    call demoUsingLCD
+    jr mainMonitoLoop
     ;read character from keypad - which is on port 1
     ; this involves scanning the rows, then reading the columns for a 1 set
     ; we have a 4 * 4 key pad
@@ -130,7 +133,37 @@ displayResult:
     out (lcdRegisterSelectData), a
     ret
     
+ demoUsingLCD:
+    ld b, $ff
+    lb a, $20
+ demoLCDLoop1:
+    push bc
+    call waitLCD
+    out (lcdRegisterSelectData), a
+    inc a
+    pop bc
+    djnz demoLCDLoop1
+	ret
+    
+;;; "generic" display code
+; self evident, this clears the display
+clearDisplay:
+    call waitLCD
+	ld a, $01
+	ld (lcdRegisterSelectCommand), a
+	ret 
 
+moveCursorToPostion:  ;; b store the cursor position 
+	call waitLCD
+	ld a, $fe
+    ld (lcdRegisterSelectCommand), a
+	call waitLCD
+	ld a, $80      ; start offset into ddram for cursor, if b=0 thats top left
+	add a, b
+    ld (lcdRegisterSelectCommand), a	
+	ret
+
+;;; make sure the lcd isn't busy - by checking the busy flag
 waitLCD:    
 waitForLCDLoop:         
     in a,(lcdRegisterSelectCommand)  
@@ -196,6 +229,7 @@ ConvertToASCII_ret:
         
     ret              ; return from subroutine
     
+
 ;;; rom "constants"
 InitCommandList:
     .db $38,$0e,$01,$06,$ff
