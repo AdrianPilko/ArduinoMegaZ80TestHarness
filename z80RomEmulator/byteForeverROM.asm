@@ -19,12 +19,13 @@
     
     call initialiseLCD
     ld hl, RAM_START   ; this will overwrite srtack but is ok because nothing on it at the moment!
-    ld e, $55       ; fill all memory with $55 = 1010101
+    ld e, $0       
 memFillAndCheck:
     ld a, e   
     ld (hl), a
     ld a, (hl)
     cp e
+    inc e
     jp nz, endMemCheck
     inc hl  
     jp memFillAndCheck
@@ -44,9 +45,55 @@ runMonitor:
     
     ;; initialise and clear display on port 0
     ;; output the prompt - use ">"
+    ld hl, $0000
 mainMonitoLoop:
+    ;call clearDisplay
+    ;call demoUsingLCD
+    
+    ; print contents of memory continuously
+    ld b, $ff
+waitLoopMain:       ;; waste some cycles to slow lcd output down a bit
+    xor a
+    add a, b
+    djnz waitLoopMain
+    
+    call setLCDRow1
+    ld b, $f
+lcdClearLine1:    
+    ld a, $20   ;space
+    call displayCharacter   ; a stores character to display
+    djnz lcdClearLine1
+    
+    call waitLCD
+    call setLCDRow1    
+    ld (to_print), hl
+    push hl
+    call hexprint16
+    pop hl
+    ld a, ':'
+    call displayCharacter   ; a stores character to display
+    ld a, (hl)
+    call hexprint8    
 
-    call demoUsingLCD
+    call setLCDRow2
+    ld b, $f
+lcdClearLine2:    
+    ld a, $20   ;space
+    call displayCharacter   ; a stores character to display
+    djnz lcdClearLine2
+    call waitLCD
+    
+    call setLCDRow2
+    ld (to_print), hl
+    push hl
+    call hexprint16
+    pop hl
+    ld a, ':'
+    call displayCharacter   ; a stores character to display    
+    call waitLCD
+    ld a, (hl)
+    call hexprint8    
+    inc hl     
     jr mainMonitoLoop
     ;read character from keypad - which is on port 1
     ; this involves scanning the rows, then reading the columns for a 1 set
@@ -105,12 +152,7 @@ loopLCDBootMessage:
     jp loopLCDBootMessage    
 initialiseLCD_ret    
     ret
-    
-setLCDRow2:
-    call waitLCD
-    ld a,$c0        ; Set DDRAM address to start of the second line (0x40)
-    out (lcdRegisterSelectCommand), a     ; Send command to LCD         
-    ret 
+  
 
 printMemcheckResult:    
     ld hl, memcheckResultText    
@@ -133,14 +175,13 @@ displayResult:
     out (lcdRegisterSelectData), a
     ret
     
- demoUsingLCD:
+demoUsingLCD:
     ld b, $ff
-    lb a, $20
- demoLCDLoop1:
+    ld a, '#'
+demoLCDLoop1:
     push bc
     call waitLCD
     out (lcdRegisterSelectData), a
-    inc a
     pop bc
     djnz demoLCDLoop1
 	ret
@@ -152,6 +193,18 @@ clearDisplay:
 	ld a, $01
 	ld (lcdRegisterSelectCommand), a
 	ret 
+
+setLCDRow1:
+    call waitLCD
+    ld a, $80         ; Set DDRAM address to start of the first row
+    out (lcdRegisterSelectCommand), a     ; Send command to LCD         
+    ret 
+
+setLCDRow2:
+    call waitLCD
+    ld a, $80+ $40        ; Set DDRAM address to start of the second line (0x40)
+    out (lcdRegisterSelectCommand), a     ; Send command to LCD         
+    ret   
 
 moveCursorToPostion:  ;; b store the cursor position 
 	call waitLCD
@@ -165,10 +218,18 @@ moveCursorToPostion:  ;; b store the cursor position
 
 ;;; make sure the lcd isn't busy - by checking the busy flag
 waitLCD:    
+    push af
 waitForLCDLoop:         
+    
     in a,(lcdRegisterSelectCommand)  
     rlca              
     jr c,waitForLCDLoop    
+    pop af
+    ret 
+    
+displayCharacter:    ; register a stores tghe character
+    call waitLCD
+    out (lcdRegisterSelectData), a
     ret 
     
 hexprint16  ; print one 2byte number stored in location $to_print modified from hprint http://swensont.epizy.com/ZX81Assembly.pdf?i=1
@@ -220,7 +281,7 @@ ConvertToASCII:
     ; assuming the value in register a (0-15) to be converted to ascii
     ; convert the value to its ascii representation
     add a, '0'       ; convert value to ascii character
-    cp  '9'        ; compare with ascii '9'
+    cp  ':'        ; compare with ascii '9'
     jr  nc, ConvertToASCIIdoAdd     ; jump if the value is not between 0-9
     jp ConvertToASCII_ret
 ConvertToASCIIdoAdd:    
