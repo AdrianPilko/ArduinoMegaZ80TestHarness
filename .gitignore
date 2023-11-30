@@ -34,3 +34,6 @@ z80RomEmulator/lcd.lst
 z80RomEmulator/eeprom_data.bin
 z80RomEmulator/lcd.obj
 z80RomEmulator/.lcd.asm.swp
+z80RomEmulator/keypad.txt
+z80RomEmulator/keypad.obj
+z80RomEmulator/keypad.lst
