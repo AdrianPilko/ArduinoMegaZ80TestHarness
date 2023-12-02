@@ -8,46 +8,72 @@
     ld sp, $ffff
     call initialiseLCD
 keyPadScan:
-    ld d, 0    
-    ld b, 8
-    ld a, 00000001b
-keyboardRowScan: 
-    out (keypadInOutPort),a   ; put a out on databus on the keypad port        
-    in a, (keypadInOutPort)   ; read keypad port 
-
-    ;; a now contains the column of the key pressed 
-    ld e,a  
-    and a                     ; and'ing a with itself tells us if key was pressed
+    ld a, 1
+    ld b, 7
+    ld d, 0
+    ld c, keypadInOutPort
+keyboardRowScan:     
+    push bc
+    
+    out (c),a   ; put a out on databus on the keypad port        
+    in e, (c)   ; read keypad port 
+    bit 0, e
     jp nz, keyFound
+    bit 1, e
+    jp nz,  keyFound
+    bit 2, e
+    jp nz, keyFound
+    bit 3, e
+    jp nz, keyFound
+    bit 4, e
+    jp nz, keyFound
+    bit 5, e
+    jp nz, keyFound
+    bit 6, e
+    jp nz, keyFound
+    bit 7, e
+    jp nz, keyFound
+afterKeyFoundCall:
+
     inc d
-    rla                       ; rotate a left one 
-    djnz keyPadScan
-    jp keyPadScan
+    
+    rlca                       ; rotate a left one 
+
+    pop bc
+    djnz keyboardRowScan
+    jp keyPadScan    ; reset everything for next check of the bits
+    
+
+ClearAndPrintA
+    call clearDisplay    
+    call setLCDRow1
+    call hexprint8 
+    ret
 
 keyFound:
+    push af
     ;; row is in d, column is in e
     ;; if we have 4x4
     ;; 1 2 3 A
     ;; 4 5 6 B
     ;; 7 8 9 C
     ;; # 0 . D 
-    ;; store in memory at keypadChars 123A456B789C#0.D     
-    ld b,e
+    ;; store in memory at keypadChars 123A456B789C#0.D         
     ld hl, keypadChars
+    ld a, e
 keypadFindCharLoopCol:
-    inc hl   ; inc hl 4 times to offset to row a bit ineffcient
-    inc hl
-    inc hl
-    inc hl
-    djnz keypadFindCharLoop
+    inc hl   ; inc hl the number of times it takes e (a)
+             ; to times fall off end
+    rra
+    jp nz, keypadFindCharLoopCol
     ld b, d
 keypadFindCharLoopRow:
     inc hl
     djnz keypadFindCharLoopRow
     ld a, (hl)
     call hexprint8
-    
-    jp keyPadScan
+    pop af
+    jp afterKeyFoundCall
 
 getAndPrintKeypadA:
     out ($20),a           ;Output row
@@ -58,7 +84,8 @@ getAndPrintKeypadA:
     out (lcdRegisterSelectData), a    
     ret    
 
-hexprint8:		
+hexprint8:
+    push af ; preserve af		
     push af ;store the original value of a for later
     call waitLCD 
     pop af
@@ -75,6 +102,7 @@ hexprint8:
     and $0f ; isolate the second digit
     call ConvertToASCII       
     out (lcdRegisterSelectData), a
+    push af  ; restore af
     ret
 
 ConvertToASCII:
@@ -103,21 +131,27 @@ waitForLCDLoop:
 ;;; "generic" display code
 ; self evident, this clears the display
 clearDisplay:
+    push af
     call waitLCD
 	ld a, $01
 	ld (lcdRegisterSelectCommand), a
+    pop af 
 	ret 
 
 setLCDRow1:
+    push af
     call waitLCD
     ld a, $80         ; Set DDRAM address to start of the first row
     out (lcdRegisterSelectCommand), a     ; Send command to LCD         
+    pop af
     ret     
     
 setLCDRow2:
+    push af
     call waitLCD
     ld a, $80+ $40        ; Set DDRAM address to start of the second line (0x40)
     out (lcdRegisterSelectCommand), a     ; Send command to LCD         
+    pop af
     ret   
 
     
@@ -137,5 +171,5 @@ initialiseLCDRET:
 InitCommandList:
     .db $38,$0e,$01,$06,$ff
 keypadChars:
-    .db 123A456B789C#0.D     
+    .db 123A456B789CF0E
 #END
