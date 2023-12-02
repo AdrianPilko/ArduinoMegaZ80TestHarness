@@ -13,26 +13,59 @@ keyPadScan:
     ld d, 0
     ld c, keypadInOutPort
 keyboardRowScan:     
-    push bc
-    
+    ;push bc
+    call clearDisplay    
+    call setLCDRow1
+    ld hl, lcdTextSettingOut    
+    call printStringToLCD_HL    
+        
+    call hexprint8    
+    ld c, keypadInOutPort
     out (c),a   ; put a out on databus on the keypad port        
-    in e, (c)   ; read keypad port 
-    bit 0, e
-    jp nz, keyFound
-    bit 1, e
-    jp nz,  keyFound
-    bit 2, e
-    jp nz, keyFound
-    bit 3, e
-    jp nz, keyFound
-    bit 4, e
-    jp nz, keyFound
-    bit 5, e
-    jp nz, keyFound
-    bit 6, e
-    jp nz, keyFound
-    bit 7, e
-    jp nz, keyFound
+    in e, (c)   ; read keypad port     
+    
+    
+    push af  ; preserve af
+    call setLCDRow2
+    ld hl, gotCodeText
+    call printStringToLCD_HL      
+    
+    ld a, e    
+    call hexprint8    
+    pop af
+    
+    push bc
+    ld b, $ff
+keyboardRowScandelayL1:    ; add a delay so we can see what's going on
+    push bc
+    ld b, $ff
+keyboardRowScandelayL2:        
+    
+    djnz keyboardRowScandelayL2
+    pop bc
+    djnz keyboardRowScandelayL1    
+    pop bc
+    
+    rlca
+    jp keyboardRowScan
+
+    
+    ; bit 0, e
+    ; jp nz, keyFound
+    ; bit 1, e
+    ; jp nz,  keyFound
+    ; bit 2, e
+    ; jp nz, keyFound
+    ; bit 3, e
+    ; jp nz, keyFound
+    ; bit 4, e
+    ; jp nz, keyFound
+    ; bit 5, e
+    ; jp nz, keyFound
+    ; bit 6, e
+    ; jp nz, keyFound
+    ; bit 7, e
+    ; jp nz, keyFound
 afterKeyFoundCall:
 
     inc d
@@ -84,9 +117,24 @@ getAndPrintKeypadA:
     out (lcdRegisterSelectData), a    
     ret    
 
+
+printStringToLCD_HL:    
+    push af
+printStringToLCD_HLLoop:
+    call waitLCD 
+    ld a, (hl)
+    cp $ff
+    jp z, printStringToLCD_HLLoopEND
+    out (lcdRegisterSelectData), a
+    inc hl
+    jp printStringToLCD_HLLoop
+printStringToLCD_HLLoopEND:    
+    pop af
+    ret 
+    
 hexprint8:
     push af ; preserve af		
-    push af ;store the original value of a for later
+    push af ; preserve af		
     call waitLCD 
     pop af
     push af ;store the original value of a for later
@@ -102,7 +150,7 @@ hexprint8:
     and $0f ; isolate the second digit
     call ConvertToASCII       
     out (lcdRegisterSelectData), a
-    push af  ; restore af
+    pop af  ; restore af
     ret
 
 ConvertToASCII:
@@ -171,5 +219,9 @@ initialiseLCDRET:
 InitCommandList:
     .db $38,$0e,$01,$06,$ff
 keypadChars:
-    .db 123A456B789CF0E
+    .db "123A456B789CF0E"
+lcdTextSettingOut:
+    .db "Setting bits ",$ff
+gotCodeText:
+    .db "got bits ",$ff
 #END
