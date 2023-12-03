@@ -14,17 +14,42 @@ keyPadScan:
     ld c, keypadInOutPort
 keyboardRowScan:     
     ;push bc
-    call clearDisplay    
+    ld c, keypadInOutPort
+keyboard_loop:          ;Loop for each row    
+    push af
+    out (c),a   ; put a out on databus on the keypad port        
+    in e, (c)   ; read keypad port into e
+    ld a, 7f    ; for come reason on my hardware I alwasys get 0x80 (10000000b)
+    and e
+    cp 0
+    ld e, a        
+    pop af
+    jp nz,keyFoundLocal     ;If non-zero then a key is being pressed    
+       
+    push bc
+    ld b, $ff
+keyboardRowScandelayL1:    ; add a delay so we can see what's going on
+    push bc
+    ld b, $f
+keyboardRowScandelayL2:        
+    
+    djnz keyboardRowScandelayL2
+    pop bc
+    djnz keyboardRowScandelayL1    
+    pop bc
+
+carryOnScanning:    
+    rlca
+    jp keyboardRowScan
+
+keyFoundLocal:
+    push af
+    ;call clearDisplay    
     call setLCDRow1
     ld hl, lcdTextSettingOut    
     call printStringToLCD_HL    
         
     call hexprint8    
-    ld c, keypadInOutPort
-    out (c),a   ; put a out on databus on the keypad port        
-    in e, (c)   ; read keypad port     
-    
-    
     push af  ; preserve af
     call setLCDRow2
     ld hl, gotCodeText
@@ -33,21 +58,8 @@ keyboardRowScan:
     ld a, e    
     call hexprint8    
     pop af
-    
-    push bc
-    ld b, $ff
-keyboardRowScandelayL1:    ; add a delay so we can see what's going on
-    push bc
-    ld b, $ff
-keyboardRowScandelayL2:        
-    
-    djnz keyboardRowScandelayL2
-    pop bc
-    djnz keyboardRowScandelayL1    
-    pop bc
-    
-    rlca
-    jp keyboardRowScan
+
+    jp carryOnScanning  ; jump back
 
     
     ; bit 0, e
