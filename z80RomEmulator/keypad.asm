@@ -11,40 +11,29 @@ keyPadScan:
     ld a, 1
     ld b, 7
     ld d, 0
+keyboardRowScan:          ;Loop for each row    
     ld c, keypadInOutPort
-keyboardRowScan:     
-    ;push bc
-    ld c, keypadInOutPort
-keyboard_loop:          ;Loop for each row    
-    push af
     out (c),a   ; put a out on databus on the keypad port        
     in e, (c)   ; read keypad port into e
-    ld a, 7f    ; for come reason on my hardware I alwasys get 0x80 (10000000b)
-    and e
-    cp 0
-    ld e, a        
-    pop af
-    jp nz,keyFoundLocal     ;If non-zero then a key is being pressed    
+    cp e        
+    call nz,keyFoundLocal     ;If non-zero then a key is being pressed    
        
-    push bc
     ld b, $ff
 keyboardRowScandelayL1:    ; add a delay so we can see what's going on
     push bc
-    ld b, $f
-keyboardRowScandelayL2:        
-    
+    ld b, $7f
+keyboardRowScandelayL2:    ; add a delay so we can see what's going on
     djnz keyboardRowScandelayL2
-    pop bc
+    pop bc    
     djnz keyboardRowScandelayL1    
-    pop bc
-
-carryOnScanning:    
+    
     rlca
+    
     jp keyboardRowScan
 
 keyFoundLocal:
     push af
-    ;call clearDisplay    
+    call clearDisplay    
     call setLCDRow1
     ld hl, lcdTextSettingOut    
     call printStringToLCD_HL    
@@ -59,35 +48,8 @@ keyFoundLocal:
     call hexprint8    
     pop af
 
-    jp carryOnScanning  ; jump back
+    ret
 
-    
-    ; bit 0, e
-    ; jp nz, keyFound
-    ; bit 1, e
-    ; jp nz,  keyFound
-    ; bit 2, e
-    ; jp nz, keyFound
-    ; bit 3, e
-    ; jp nz, keyFound
-    ; bit 4, e
-    ; jp nz, keyFound
-    ; bit 5, e
-    ; jp nz, keyFound
-    ; bit 6, e
-    ; jp nz, keyFound
-    ; bit 7, e
-    ; jp nz, keyFound
-afterKeyFoundCall:
-
-    inc d
-    
-    rlca                       ; rotate a left one 
-
-    pop bc
-    djnz keyboardRowScan
-    jp keyPadScan    ; reset everything for next check of the bits
-    
 
 ClearAndPrintA
     call clearDisplay    
@@ -95,30 +57,30 @@ ClearAndPrintA
     call hexprint8 
     ret
 
-keyFound:
-    push af
-    ;; row is in d, column is in e
-    ;; if we have 4x4
-    ;; 1 2 3 A
-    ;; 4 5 6 B
-    ;; 7 8 9 C
-    ;; # 0 . D 
-    ;; store in memory at keypadChars 123A456B789C#0.D         
-    ld hl, keypadChars
-    ld a, e
-keypadFindCharLoopCol:
-    inc hl   ; inc hl the number of times it takes e (a)
-             ; to times fall off end
-    rra
-    jp nz, keypadFindCharLoopCol
-    ld b, d
-keypadFindCharLoopRow:
-    inc hl
-    djnz keypadFindCharLoopRow
-    ld a, (hl)
-    call hexprint8
-    pop af
-    jp afterKeyFoundCall
+; keyFound:
+    ; push af
+    ; ;; row is in d, column is in e
+    ; ;; if we have 4x4
+    ; ;; 1 2 3 A
+    ; ;; 4 5 6 B
+    ; ;; 7 8 9 C
+    ; ;; # 0 . D 
+    ; ;; store in memory at keypadChars 123A456B789C#0.D         
+    ; ld hl, keypadChars
+    ; ld a, e
+; keypadFindCharLoopCol:
+    ; inc hl   ; inc hl the number of times it takes e (a)
+             ; ; to times fall off end
+    ; rra
+    ; jp nz, keypadFindCharLoopCol
+    ; ld b, d
+; keypadFindCharLoopRow:
+    ; inc hl
+    ; djnz keypadFindCharLoopRow
+    ; ld a, (hl)
+    ; call hexprint8
+    ; pop af
+    ; jp afterKeyFoundCall
 
 getAndPrintKeypadA:
     out ($20),a           ;Output row
