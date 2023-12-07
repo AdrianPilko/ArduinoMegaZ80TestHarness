@@ -18,83 +18,20 @@
     ld  sp , STACK_BOTTOM 
     
     call initialiseLCD
-    ld hl, RAM_START   ; this will overwrite srtack but is ok because nothing on it at the moment!
-    ld e, $0       
-memFillAndCheck:
-    ld a, e   
-    ld (hl), a
-    ld a, (hl)
-    cp e
-    inc e
-    jp nz, endMemCheck
-    inc hl  
-    jp memFillAndCheck
-    ; only gets here if it didn't find top of ram?!
-    halt
-     
-endMemCheck:
-    dec hl   ; dec by one as check tested location+1
-    ld  sp , STACK_BOTTOM 
-    ;; write the value of hl to memory location $201
-    ld (RAM_MAX_VAR), hl
     call setLCDRow2
-    call printMemcheckResult     
     
-runMonitor:   
-    ;; machine code monitor :::: TODO!
-    
-    ;; initialise and clear display on port 0
-    ;; output the prompt - use ">"
+    ;; initialise some variables
+    xor a
+    ld (commandFound), a    
+    ld (paramCharCount), a
     ld hl, $0000
+    ld (paramStrPtr), hl
+    
+    
 mainMonitoLoop:
-    ;call clearDisplay
+    call clearDisplay
     ;call demoUsingLCD
     
-    ; print contents of memory continuously
-    ld b, $ff
-waitLoopMain:       ;; waste some cycles to slow lcd output down a bit
-    xor a
-    add a, b
-    djnz waitLoopMain
-    
-    call setLCDRow1
-    ld b, $f
-lcdClearLine1:    
-    ld a, $20   ;space
-    call displayCharacter   ; a stores character to display
-    djnz lcdClearLine1
-    
-    call waitLCD
-    call setLCDRow1    
-    ld (to_print), hl
-    push hl
-    call hexprint16
-    pop hl
-    ld a, ':'
-    call displayCharacter   ; a stores character to display
-    ld a, (hl)
-    call hexprint8    
-
-    call setLCDRow2
-    ld b, $f
-lcdClearLine2:    
-    ld a, $20   ;space
-    call displayCharacter   ; a stores character to display
-    djnz lcdClearLine2
-    call waitLCD
-    
-    call setLCDRow2
-    ld (to_print), hl
-    push hl
-    call hexprint16
-    pop hl
-    ld a, ':'
-    call displayCharacter   ; a stores character to display    
-    call waitLCD
-    ld a, (hl)
-    call hexprint8    
-    inc hl     
-    jr mainMonitoLoop
     ;read character from keypad - which is on port 1
     ; this involves scanning the rows, then reading the columns for a 1 set
     ; we have a 4 * 4 key pad
@@ -104,18 +41,139 @@ lcdClearLine2:
     ;  R F E D      ; the hex numbers are as normal and R represents return/enter in the monitor
     ;
     ;
-    ld b, 4
-keypadScanLoop:    
-    ld a, b
-    out (keypadInOutPort), a    ; put row count out on the keypad port
-    in a, (keypadInOutPort)     ; immediately read back in
+
+keyboardScanInit:
+    ld c,keypadInOutPort  ;Port address
+    ld a,1              ;Row to scan
+    ld d,0              ;Row index    
+keypadScanLoop:         
+    ld c, keypadInOutPort    
+    out (c), a    ; put row count out on the keypad port
+    in e, (c)     ; immediately read back in    
+    jp nz, keyFoundinRegARow_DCol
+    inc d
+    rlca
+    jr nc,keypadScanLoop 
+
+    
+    jp keyboardScanInit 
+    
+
+;########################### START OF BREAD 80
+;;;; understand how it works then rewrite
+
+
+
+keyFoundinRegARow_DCol:              ;We found a pressed key
+                        ;Print row index (decimal) and column (binary)
+                        
+    push bc
+    ld b, $ff
+waitLoopAfterKeyFound1:    
+    push bc
+    ld b, $3f
+waitLoopAfterKeyFound2:       
+ 
+    djnz waitLoopAfterKeyFound2
+    pop bc
+    djnz waitLoopAfterKeyFound1
+    pop bc
+    
+    ;A=Row bit
+    ;D=Row index
+    ;E=Returned column
+    xor a               ;A=0 (index counter)
+column_index_loop:
+    rr e                ;Rotate E right until we find the bit which is set
+    jr c,column_index_done
+    inc a               ;Otherwise, inc index and loop again
+    jr column_index_loop
+    
+column_index_done:
+    ;A=Column index
+    ;D=Row index
+    ;Calculate key number (index into look up table)
+    ;We'll end up with a value, in A, 0000ccrr where cc is the column index
+    ;and rr is the row index.
+    ld e,a              ;Save column into E
+    
+    ld a,-4             ;Our keypad only uses the low 4 bits of the row
+    add a,d             ;address so we need to subtract 4 from the index.
+                        ;We do this by adding -4 to keep the code shorter.
+                        ;We could simplify this with known specific hardware.
+                        
+    add a,a             ;Shift column left 2 bits. Adding a number to itself
+    add a,a             ;is the same as a left shift but ADD A,A is faster on Z80.
+    
+    add a,e             ;Add on row. A = final key value.
+    
+;Lookup the key value in the table
+    ld e,a              ;Pop into E for outputting
+    
+    ;Lookup character in lookup table
+    ld hl,keypadLookup    ;Table address
+    ld c,a              ;Char offset in BC
+    ld b,0
+    add hl,bc
+    ld l,(hl)           ;Key in L, saved for later
+
+   
+    call waitLCD
+    
+    ld c,lcdRegisterSelectData       ;LCD command port
+    out (c),l           ;*****Output the character
+    ld a, l
+    ld (charFoundASCII), a
+    
+    ; the processing will be 1 hex digits for command, what follows depends on the command
+    ; checking of command not yet implemented
+    ; 0 - read memory   - 0 <from start sddress16bits><to end address16bits> 
+
+    ld a, (commandFound)
     cp 1
-    jp z, keyFoundinRegA
-    djnz keypadScanLoop
-    jp noKeyPressed
-keyFoundinRegA:      
-    ; echo the character to the display
-    call hexprint8
+    jp z, waitingParam
+
+    ld a, l   ; if the commandFound is zero then we need another  
+    cp '0'
+    jp nz, waitingParam
+  
+    call displayEnterAddress
+    ld a, 1
+    ld (commandFound), a
+    xor a
+    ld (paramCharCount), a
+    ld hl, paramStrMem
+    ld (paramStrPtr), hl
+    jp keyboardScanInit
+waitingParam:    
+    ld a, (paramCharCount)
+    inc a
+    ld (paramCharCount), a
+    cp 9 
+    jp z, paramComplete    
+    ld a, (charFoundASCII)
+    ld hl, (paramStrPtr)
+    ld (hl), a
+    inc hl
+    ld (paramStrPtr), hl
+   
+    jp keyboardScanInit
+paramComplete:
+    ;;; process command 
+    ;; (for now just set command found back to zero)
+    ;; todo print memory represented by the start end in the 8 chars
+    
+    xor a
+    ld (commandFound), a    
+    ld (paramCharCount), a
+    ;;call displayAddressFromParamStrMem    
+    call displayEnterCommand
+        
+    jp keyboardScanInit    ;Loop infinitely
+    
+
+;############################# END OF BREAD 80
+    
     
     ; todo
     
@@ -164,6 +222,7 @@ displayLCDMemCheckResultText:
     out (lcdRegisterSelectData), a
     inc hl
     jp displayLCDMemCheckResultText
+    ret
     
 displayResult:
     call waitLCD    
@@ -174,6 +233,101 @@ displayResult:
     ld a, 'h'    
     out (lcdRegisterSelectData), a
     ret
+    
+displayEnterAddress:        
+    call setLCDRow1
+    ld hl, EnterAddressPromptText    
+displayEnterAddressLoop:
+    call waitLCD 
+    ld a, (hl)
+    cp $ff
+    jp z, displayEnterAddressRet
+    out (lcdRegisterSelectData), a
+    inc hl
+    jp displayEnterAddressLoop
+displayEnterAddressRet:    
+    call setLCDRow2
+    ret
+
+displayAddressFromParamStrMem:
+    ld hl, (paramStrMem)
+    ;call convertASCIIBackToHexHL
+    ;; now look up memory and display
+    ret
+    
+convertASCIIBackToHexHL:    ; char array "pointer" stored in hl
+;; got this next bit from chart gpt not working yet!!!
+    ; ld hl, CharArray ; Assuming CharArray holds the ASCII characters
+    ; ld de, HexArray  ; Destination array to hold hexadecimal representation
+    ; ld bc, 4         ; Length of the character array (4 characters)
+    
+
+; ConversionLoop:
+    ; ld a, (hl)      ; Load the ASCII character into register A
+    ; call AsciiToHex ; Call subroutine to convert ASCII to hexadecimal
+    ; ld (de), a      ; Store the hexadecimal value in HexArray
+    ; inc hl          ; Move to the next character in the CharArray
+    ; inc de          ; Move to the next position in the HexArray
+    ; djnz ConversionLoop ; Continue the loop until all characters are converted
+
+    ; ; Your code continues here...
+
+; AsciiToHex:
+    ; cp '0'          ; Compare with '0' (ASCII value)
+    ; jr c, NotNum    ; If less than '0', it's not a number
+
+    ; cp '9' + 1      ; Compare with ('9' + 1)
+    ; jr nc, NotNum   ; If greater than '9', it's not a number
+
+    ; sub '0'         ; Convert digit from ASCII to decimal
+    ; ret             ; Return with the hexadecimal value in A
+
+; NotNum:
+    ; cp 'A'          ; Compare with 'A' (ASCII value for A)
+    ; jr c, NotAlpha  ; If less than 'A', it's not an uppercase letter
+
+    ; cp 'F' + 1      ; Compare with ('F' + 1)
+    ; jr nc, NotAlpha ; If greater than 'F', it's not an uppercase letter
+
+    ; sub 'A' - 10    ; Convert uppercase letter from ASCII to decimal (subtract 10)
+    ; ret             ; Return with the hexadecimal value in A
+
+; NotAlpha:
+    ; cp 'a'          ; Compare with 'a' (ASCII value for a)
+    ; jr c, Invalid   ; If less than 'a', it's neither uppercase nor lowercase letter
+
+    ; cp 'f' + 1      ; Compare with ('f' + 1)
+    ; jr nc, Invalid  ; If greater than 'f', it's neither uppercase nor lowercase letter
+
+    ; sub 'a' - 10    ; Convert lowercase letter from ASCII to decimal (subtract 10)
+    ; ret             ; Return with the hexadecimal value in A
+
+; Invalid:
+    ; ; Handle invalid characters (optional)
+    ; ret             ; Return
+
+; CharArray:
+    ; .db '1', 'A', 'b', 'F' ; Example ASCII character array
+; HexArray:
+    ; .ds 4               ; Space to store hexadecimal representation
+    ret
+
+    
+displayEnterCommand:
+    call setLCDRow1
+    ld hl, displayEnterCommandText    
+displayEnterCommandLoop:
+    call waitLCD 
+    ld a, (hl)
+    cp $ff
+    jp z, displayEnterCommandRet
+    out (lcdRegisterSelectData), a
+    inc hl
+    jp displayEnterCommandLoop
+displayEnterCommandRet:    
+    call setLCDRow2
+    ret    
+    
     
 demoUsingLCD:
     ld b, $ff
@@ -189,9 +343,11 @@ demoLCDLoop1:
 ;;; "generic" display code
 ; self evident, this clears the display
 clearDisplay:
+    push af
     call waitLCD
 	ld a, $01
 	ld (lcdRegisterSelectCommand), a
+    pop af
 	ret 
 
 setLCDRow1:
@@ -201,9 +357,11 @@ setLCDRow1:
     ret 
 
 setLCDRow2:
+    push af
     call waitLCD
     ld a, $80+ $40        ; Set DDRAM address to start of the second line (0x40)
     out (lcdRegisterSelectCommand), a     ; Send command to LCD         
+    pop af
     ret   
 
 moveCursorToPostion:  ;; b store the cursor position 
@@ -219,8 +377,7 @@ moveCursorToPostion:  ;; b store the cursor position
 ;;; make sure the lcd isn't busy - by checking the busy flag
 waitLCD:    
     push af
-waitForLCDLoop:         
-    
+waitForLCDLoop:             
     in a,(lcdRegisterSelectCommand)  
     rlca              
     jr c,waitForLCDLoop    
@@ -298,7 +455,12 @@ BootMessage:
     .db "Z80 byteForever",$ff
 memcheckResultText:
     .db "Memcheck=",$ff    
-    
+EnterAddressPromptText
+    .db "start/end addr: ",$ff
+displayEnterCommandText:    
+    .db "enter command:  ",$ff
+keypadLookup:
+    .db "DE0FC987B654A321"    
 ;;; ram variables    
     .org RAM_START
 RAM_MAX_VAR:
@@ -307,5 +469,15 @@ POST_RESULT:
     .dw $ffff    
 to_print:
     .dw $0000
+commandFound:
+    .db $00
+paramStrMem:
+    .db "00000000",$ff,$ff,$ff
+paramStrPtr:
+    .dw $0000
+paramCharCount:
+    .db $00
+charFoundASCII
+    .db $00
 #END
 
